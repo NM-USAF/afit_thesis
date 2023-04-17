@@ -7,29 +7,14 @@ plt.rcParams["axes.titlesize"] = 10 # for big titles
 cmap = matplotlib.colormaps['viridis']
 
 n_points = 100
-dol_min = 1.1
-dol_max = 20
-eps = 0.00001 # numerical stability in arcsin
+lod_min = 0.01
+lod_max = 0.99
+eps = 0.0000001 # numerical stability in arcsin and tan
 
 def custom_colorbar(min, max, **kwargs):
     norm = matplotlib.colors.Normalize(min, max)
     plt.colorbar(matplotlib.cm.ScalarMappable(norm=norm, cmap=cmap), **kwargs)
 
-def plot_phi_cap(mu=1, n_lines=100):
-
-    lod = np.linspace(1/dol_max, 1/dol_min, n_lines)
-    dol = 1/lod
-    th_max = np.arcsin(2/dol - 1)
-    theta = np.linspace(-np.pi/2, th_max-eps, n_points)
-
-    plt.title(f"Pursuer Heading at Capture against Evader Heading for $\mu={mu}$")
-    plt.xlabel(r"$\theta$")
-    plt.ylabel(r"$\phi_c$", rotation=0)
-    for i in range(n_lines):
-        phi_cap = pp.phi_cap_1(theta[:,i], dol[i], mu)
-        plt.plot(theta[:,i], phi_cap, color=cmap(i/n_lines))
-
-    custom_colorbar(1/dol_max, 1/dol_min, label="l/d")
 
 def plot_r(mu, n_lines=100):
     theta = np.linspace(-np.pi/2+eps, np.pi/2-eps, n_lines)
@@ -49,11 +34,30 @@ def plot_r(mu, n_lines=100):
 
     return theta, phi, r
 
-def plot_t_cap(mu, n_lines=100):
-    lod = np.linspace(1/dol_max, 1/dol_min, n_lines)
+
+def plot_phi_cap(mu=1, n_lines=100):
+    lod = np.linspace(lod_min, lod_max, n_lines)
     th_max = np.arcsin(2*lod - 1)
-    th_min = np.clip(-np.pi - th_max, -np.pi/2, np.pi/2)
-    theta = np.linspace(th_min+eps, th_max-eps, n_points)
+    theta = np.linspace(-np.pi/2, th_max-eps, n_points)
+
+    plt.title(f"Pursuer Heading at Capture against Evader Heading for $\mu={mu}$")
+    plt.xlabel(r"$\theta$")
+    plt.ylabel(r"$\phi_c$", rotation=0)
+    for i in range(n_lines):
+        phi_cap = pp.phi_cap_1(theta[:,i], 1/lod[i], mu)
+        plt.plot(theta[:,i], phi_cap, color=cmap(i/n_lines))
+        print(mu)
+        print(phi_cap)
+
+    custom_colorbar(lod_min, lod_max, label="l/d")
+
+
+def plot_t_cap(mu, n_lines=100):
+    lod = np.linspace(lod_min, lod_max, n_lines)
+    th_max = np.arcsin(2*lod - 1)
+    
+    # t_cap needs extra epsilon at the low end for a point near tan(pi/2)
+    theta = np.linspace(-np.pi/2+0.1, th_max-eps, n_points)
     
     plt.title(f"Distance Normalized Time to Capture against Evader Heading for $\mu={mu}$")
     plt.xlabel(r"$\theta$")
@@ -61,11 +65,9 @@ def plot_t_cap(mu, n_lines=100):
 
     for i in range(n_lines):
         t_cap = pp.t_cap_1(theta[:,i], lod[i], mu)
-        # if any(t_cap < 0):
-        #     continue # don't ask
         plt.plot(theta[:,i], t_cap, color=cmap(i/n_lines))
 
-    custom_colorbar(1/dol_max, 1/dol_min, label="l/d")
+    custom_colorbar(lod_min, lod_max, label="l/d")
     
 
 if __name__ == "__main__":

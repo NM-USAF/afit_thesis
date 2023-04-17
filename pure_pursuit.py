@@ -30,7 +30,14 @@ def phi_cap_1(theta, dol, mu=1):
             np.roots([1, 2, 0, -2, (_a**2)-1])
             for _a in a
         ])
-        where_valid = (np.isreal(roots)) & (roots > -1) & (roots < 1)
+
+        # psi can't be greater than pi/2-theta or less than 0
+        bound = np.cos(np.pi/2-theta)
+        where_valid = (
+            (np.isreal(roots)) & 
+            (roots > bound[:,None]) & 
+            (roots < 1)
+        )
 
         # select the largest valid root as the solution
         # here x = cos(phi_cap - theta)
@@ -43,7 +50,7 @@ def phi_cap_1(theta, dol, mu=1):
         assert len(x) == len(theta)
 
         # get rid of solutions that aren't valid
-        where_valid = np.isreal(x) & (x > -1) & (x < 1)
+        where_valid = np.isreal(x) & (x > bound) & (x < 1)
         x[~where_valid] = None
 
         # recover desired value
@@ -63,7 +70,7 @@ def t_cap_1(theta, lod, mu):
         return 1/2 * (1 - lod - (1+st)/2 * np.log((2*lod - (1+st))/(1-st)))
     else:
         phi_c = phi_cap_1(theta, 1/lod, 2)
-        psi = phi_c - theta
+        psi = phi_c - theta # psi > 0
         sp = np.sin(psi)
         cp = np.cos(psi)
         tp2 = np.tan(psi/2)
