@@ -1,0 +1,7 @@
+.ipynb_checkpoints
+__pycache__
+next_tasks.txt
+*.pdf
+*.png
+*.svg
+plots
