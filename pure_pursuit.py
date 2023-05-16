@@ -1,12 +1,14 @@
 import numpy as np
 
 
-# the distance ratio from the pursuer to the evader
-# phi: the pursuer's heading (changes over time)
-# theta: the evader's heading (constant)
-# mu: speed ratio (vE / vP)
-# returns distance ratio s.t. r(phi, theta, mu) * d(0) = d(t)
 def r(phi, theta, mu):
+    """
+    the distance ratio from the pursuer to the evader
+    phi: the pursuer's heading (changes over time)
+    theta: the evader's heading (constant)
+    mu: speed ratio (vE / vP)
+    returns distance ratio s.t. r(phi, theta, mu) * d(0) = d(t)
+    """
     st = np.sin(theta)
     ct = np.cos(theta)
     sp = np.sin(phi-theta)
@@ -14,11 +16,13 @@ def r(phi, theta, mu):
     return np.power(sp/ct, (1-mu)/mu) * np.power((1+st)/(1+cp), 1/mu)
 
 
-# heading of the pursuer (phi) at time of capture
-# theta: evader's heading (constant)
-# mu: speed ratio (1 or 2)
-# dol: d/l; d is start distance, l is capture range
 def phi_cap_1(theta, dol, mu=1):
+    """
+    heading of the pursuer (phi) at time of capture
+    theta: evader's heading (constant)
+    mu: speed ratio (1 or 2)
+    dol: d/l; d is start distance, l is capture range
+    """
     st = np.sin(theta)
     ct = np.cos(theta)
     if mu == 1:
@@ -39,8 +43,14 @@ def phi_cap_1(theta, dol, mu=1):
             (roots < 1)
         )
 
-        # select the largest valid root as the solution
+        # select the smallest valid root as the solution.
+        # the smallest root will match the largest angle difference,
+        # which would be the first occurence of the evader-pursuer distance
+        # crossing the capture radius. Because the evader starts out
+        # of range of the pursuer, this is when the evader first crosses
+        # into the capture range of the pursuer.
         # here x = cos(phi_cap - theta)
+        
         # setting invalid roots to above the search range for argmin
         # is a bit of a hack, but I couldn't find a better way to do it.
         roots[~where_valid] = 1.1
@@ -58,12 +68,14 @@ def phi_cap_1(theta, dol, mu=1):
         return phi_cap
         
 
-# time to capture
-# theta: evader's heading (constant)
-# mu: speed ratio (>= 1)
-# lod: l/d; l is capture range, d is start distance
-# returns t_c / d
 def t_cap_1(theta, lod, mu):
+    """
+    time to capture
+    theta: evader's heading (constant)
+    mu: speed ratio (>= 1)
+    lod: l/d; l is capture range, d is start distance
+    returns t_c / d
+    """
     st = np.sin(theta)
     ct = np.cos(theta)
     if mu == 1:
@@ -77,23 +89,29 @@ def t_cap_1(theta, lod, mu):
         return 1/(1-mu**2) * ( (1+mu*st) - np.power(1+st, 1/mu)/np.power(ct, (1-mu)/mu) * (1 + mu*cp)/sp * np.power(tp2, 1/mu) )
 
 
-# pursuer heading that minimizes distance for mu >= 1
-# theta: evader's heading (constant)
-# mu: speed ratio
-# returns: phi_m 
 def phi_min(theta, mu):
+    """
+    pursuer heading that minimizes distance for mu >= 1
+    theta: evader's heading (constant)
+    mu: speed ratio
+    returns: phi_m 
+    """
     return np.clip(np.arccos(1/mu) + theta, -np.pi/2, np.pi/2)
 
 
-# the closest the persuer will get to the evader for mu >= 1
-# theta: the evader's heading (constant)
-# mu: speed ratio
-# returns: r_m / d
 def r_min(theta, mu):
+    """
+    the closest the persuer will get to the evader for mu >= 1
+    theta: the evader's heading (constant)
+    mu: speed ratio
+    returns: r_m / d
+    """
     ct = np.cos(theta)
     st = np.sin(theta)
     return (
         np.power(np.sqrt(1-1/mu**2)/ct, (1-mu)/mu)
         * np.power((1+st)/(1+1/mu), 1/mu)
     )
+
+
 

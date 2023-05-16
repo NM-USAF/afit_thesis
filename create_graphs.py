@@ -91,17 +91,19 @@ if __name__ == "__main__":
     if not os.path.isdir(args.output):
         os.mkdir(args.output)
 
-    for mu in [0.1, 0.5, 0.75, 0.99, 1, 1.01, 1.25, 2, 3]:
-        _, phi, _ = plot_r(mu, 30)
+    n_lines=50
+
+    for mu in [0.1, 0.5, 0.75, 0.99, 1, 1.01, 1.25, 1.5, 2, 3]:
+        _, phi, _ = plot_r(mu, n_lines)
         plt.savefig(f"{args.output}/r_mu_{mu}.{args.format}")
         plt.cla()
         plt.clf()
     for mu in [1, 2]:
-        plot_phi_cap(mu, 30)
+        plot_phi_cap(mu, n_lines)
         plt.savefig(f"{args.output}/phi_cap_mu_{mu}.{args.format}")
         plt.cla()
         plt.clf()
-        plot_t_cap(mu, 30)
+        plot_t_cap(mu, n_lines)
         plt.savefig(f"{args.output}/t_cap_mu_{mu}.{args.format}")
         plt.cla()
         plt.clf()
