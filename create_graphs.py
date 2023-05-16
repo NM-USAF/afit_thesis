@@ -46,8 +46,6 @@ def plot_phi_cap(mu=1, n_lines=100):
     for i in range(n_lines):
         phi_cap = pp.phi_cap_1(theta[:,i], 1/lod[i], mu)
         plt.plot(theta[:,i], phi_cap, color=cmap(i/n_lines))
-        print(mu)
-        print(phi_cap)
 
     custom_colorbar(lod_min, lod_max, label="l/d")
 
@@ -68,6 +66,22 @@ def plot_t_cap(mu, n_lines=100):
         plt.plot(theta[:,i], t_cap, color=cmap(i/n_lines))
 
     custom_colorbar(lod_min, lod_max, label="l/d")
+
+
+def plot_mu_capture_ratio(mu, n_start, n_end):
+    ns = np.arange(n_start, n_end+1)
+
+    crits_d = pp.polygon_formation_capture_ratio_d(mu, ns)
+    crits_a = pp.polygon_formation_capture_ratio_a(mu, ns)
+
+    plt.title(f"Distance ratio at which capture occurs in a regular polygon formation for $\mu={mu}$")
+    plt.xlabel("Number of pursuers")
+    plt.ylabel("Ratio (unitless)")
+
+    plt.scatter(ns, crits_d, label=r"Threshold of $\frac{l}{d}$")
+    plt.scatter(ns, crits_a, label=r"Threshold of $\frac{l}{a}$")
+
+    plt.legend()
     
 
 if __name__ == "__main__":
@@ -107,3 +121,6 @@ if __name__ == "__main__":
         plt.savefig(f"{args.output}/t_cap_mu_{mu}.{args.format}")
         plt.cla()
         plt.clf()
+
+    plot_mu_capture_ratio(2, 3, 12)
+    plt.savefig(f"{args.output}/poly_dist_cap.{args.format}")

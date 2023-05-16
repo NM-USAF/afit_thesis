@@ -114,4 +114,32 @@ def r_min(theta, mu):
     )
 
 
+def polygon_formation_capture_ratio_d(mu, n):
+    """
+    distance ratio at which capture occurs when `n` pursuers 
+    are surrounding an evader in a regular polygon shape 
+    mu: evader/pursuer speed ratio
+    n: number of sides to the polygon
+    returns: crit_value where l/d > crit_value means capture will occur
+    """
+    angle = np.pi / n
+    ca = np.cos(angle)
+    sa = np.sin(angle)
+    return (
+        np.power(np.sqrt(1-1/mu**2)/sa, (1-mu)/mu)
+        * np.power((1-ca)/(1+1/mu), 1/mu)
+    )
+
+
+def polygon_formation_capture_ratio_a(mu, n):
+    """
+    side length to capture radius ratio at which capture occurs when `n` 
+    pursuers are surrounding an evader in a regular polygon shape, where 
+    `a` is the side length of the polygon formation
+    mu: evader/pursuer speed ratio
+    n: number of sides to the polygon
+    returns: crit_value where l/a > crit_value means capture will occur
+    """
+    a_d_ratio = 2 * np.sin(np.pi / n)
+    return polygon_formation_capture_ratio_d(mu, n) / a_d_ratio
 
