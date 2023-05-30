@@ -101,17 +101,33 @@ def phi_min(theta, mu):
 
 def r_min(theta, mu):
     """
-    the closest the persuer will get to the evader for mu >= 1
+    the closest the pursuer will get to the evader for mu >= 1
     theta: the evader's heading (constant)
     mu: speed ratio
     returns: r_m / d
     """
     ct = np.cos(theta)
     st = np.sin(theta)
-    return (
+    
+    r_m = (
         np.power(np.sqrt(1-1/mu**2)/ct, (1-mu)/mu)
         * np.power((1+st)/(1+1/mu), 1/mu)
     )
+    # v_t_0 = mu * cos(\psi_0)
+    # \psi_0 = \phi_0 - \theta
+    # \phi_0 = \pi/2
+    # -> v_t_0 = mu * cos(\pi/2 - \theta)
+    # if v_t_0 > 1, evader starts moving away from pursuer
+    # faster than the pursuer can go - pursuer can't possibly
+    # catch the evader
+    # ^^^ TODO Add this to paper under capture conditions
+
+    invalid = mu * np.cos(np.pi/2 - theta) > 1
+    r_m[invalid] = 1
+    # TODO make this work when theta is not an ndarray
+
+    return r_m
+
 
 
 def polygon_formation_capture_ratio_d(mu, n):
@@ -120,7 +136,7 @@ def polygon_formation_capture_ratio_d(mu, n):
     are surrounding an evader in a regular polygon shape 
     mu: evader/pursuer speed ratio
     n: number of sides to the polygon
-    returns: crit_value where l/d > crit_value means capture will occur
+    returns: crit_value where l/d > crit_value -> capture will occur
     """
     angle = np.pi / n
     ca = np.cos(angle)
@@ -138,7 +154,7 @@ def polygon_formation_capture_ratio_a(mu, n):
     `a` is the side length of the polygon formation
     mu: evader/pursuer speed ratio
     n: number of sides to the polygon
-    returns: crit_value where l/a > crit_value means capture will occur
+    returns: crit_value where l/a > crit_value -> capture will occur
     """
     a_d_ratio = 2 * np.sin(np.pi / n)
     return polygon_formation_capture_ratio_d(mu, n) / a_d_ratio
