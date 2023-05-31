@@ -16,20 +16,20 @@ def r(phi, theta, mu):
     return np.power(sp/ct, (1-mu)/mu) * np.power((1+st)/(1+cp), 1/mu)
 
 
-def phi_cap_1(theta, dol, mu=1):
+def phi_cap_1(theta, lod, mu=1):
     """
     heading of the pursuer (phi) at time of capture
     theta: evader's heading (constant)
     mu: speed ratio (1 or 2)
-    dol: d/l; d is start distance, l is capture range
+    lod: l/d; d is start distance, l is capture range
     """
     st = np.sin(theta)
     ct = np.cos(theta)
     if mu == 1:
-        return theta + np.arccos((1+st)*dol - 1)
+        return theta + np.arccos((1+st)/lod - 1)
     elif mu == 2:
         # just let numpy solve the 4th order polynomial
-        a = (dol**2) * (1 + st) * ct
+        a = (1 + st) / (lod**2)  * ct
         roots = np.array([
             np.roots([1, 2, 0, -2, (_a**2)-1])
             for _a in a
@@ -113,21 +113,13 @@ def r_min(theta, mu):
         np.power(np.sqrt(1-1/mu**2)/ct, (1-mu)/mu)
         * np.power((1+st)/(1+1/mu), 1/mu)
     )
-    # v_t_0 = mu * cos(\psi_0)
-    # \psi_0 = \phi_0 - \theta
-    # \phi_0 = \pi/2
-    # -> v_t_0 = mu * cos(\pi/2 - \theta)
-    # if v_t_0 > 1, evader starts moving away from pursuer
-    # faster than the pursuer can go - pursuer can't possibly
-    # catch the evader
-    # ^^^ TODO Add this to paper under capture conditions
 
+    # another way of constraining phi_m < pi/2
     invalid = mu * np.cos(np.pi/2 - theta) > 1
     r_m[invalid] = 1
     # TODO make this work when theta is not an ndarray
 
     return r_m
-
 
 
 def polygon_formation_capture_ratio_d(mu, n):

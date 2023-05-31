@@ -44,7 +44,7 @@ def plot_phi_cap(mu=1, n_lines=100):
     plt.xlabel(r"$\theta$")
     plt.ylabel(r"$\phi_c$", rotation=0)
     for i in range(n_lines):
-        phi_cap = pp.phi_cap_1(theta[:,i], 1/lod[i], mu)
+        phi_cap = pp.phi_cap_1(theta[:,i], lod[i], mu)
         plt.plot(theta[:,i], phi_cap, color=cmap(i/n_lines))
 
     custom_colorbar(lod_min, lod_max, label="l/d")
