@@ -117,7 +117,7 @@ def plot_min_r(mu_min, mu_max, n_lines=100):
     theta = np.linspace(-np.pi/2, np.pi/2, n_points)
     mu = np.linspace(mu_min, mu_max, n_lines)
 
-    plt.title(f"Minimum Persuer-Evader Distance")
+    plt.title(f"Minimum pursuer-Evader Distance")
     plt.xlabel(r"$\theta$")
     plt.ylabel(r"$min(\frac{r}{d})$")
 

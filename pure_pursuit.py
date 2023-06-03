@@ -81,7 +81,7 @@ def t_cap_1(theta, lod, mu):
     if mu == 1:
         return 1/2 * (1 - lod - (1+st)/2 * np.log((2*lod - (1+st))/(1-st)))
     else:
-        phi_c = phi_cap_1(theta, 1/lod, 2)
+        phi_c = phi_cap_1(theta, lod, 2)
         psi = phi_c - theta # psi > 0
         sp = np.sin(psi)
         cp = np.cos(psi)
