@@ -117,7 +117,7 @@ def plot_min_r(mu_min, mu_max, n_lines=100):
     theta = np.linspace(-np.pi/2, np.pi/2, n_points)
     mu = np.linspace(mu_min, mu_max, n_lines)
 
-    plt.title(f"Minimum pursuer-Evader Distance")
+    plt.title(f"Minimum pursuer-evader distance")
     plt.xlabel(r"$\theta$")
     plt.ylabel(r"$min(\frac{r}{d})$")
 
@@ -126,6 +126,26 @@ def plot_min_r(mu_min, mu_max, n_lines=100):
         plt.plot(theta, r_m, color=cmap(i/n_lines))
 
     custom_colorbar(mu_min, mu_max, label=r"$\mu$")
+
+
+def plot_optimal_evader_heading(mu_min, mu_max, n_lines=100):
+    mu = np.linspace(mu_min, mu_max, n_lines)
+    dr_over_dl = np.linspace(0, 2.99, n_points)
+
+    plt.title(r"Optimal evader heading for pursuers with the same capture radius and a gap of $\frac{\pi}{3}$")
+    plt.xlabel(r"Pursuer distance ratio $\frac{d_l}{d_r}$")
+    plt.ylabel(r"Optimal constant evader heading from left pursuer $\theta_l$")
+
+    dl = np.ones(len(dr_over_dl))
+    dr = dr_over_dl
+    for i in range(n_lines):
+        angle_between = np.ones(len(dr_over_dl)) * np.pi/3
+        th_l = pp.optimal_evader_heading(dl, dr, angle_between, mu[i])
+        
+        plt.plot(dr_over_dl, th_l, color=cmap(i/n_lines))
+
+    custom_colorbar(mu_min, mu_max, label=r"$\mu$")
+
 
 if __name__ == "__main__":
     import argparse
@@ -185,3 +205,7 @@ if __name__ == "__main__":
     plt.cla()
     plt.clf()
 
+    plot_optimal_evader_heading(1, 5, 20)
+    plt.savefig(f"{args.output}/optimal_evader_heading.{args.format}")
+    plt.cla()
+    plt.clf()

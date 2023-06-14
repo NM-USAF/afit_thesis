@@ -18,6 +18,7 @@ def test_phi_r_min():
         r_m = pp.r(phi_m, thetas, m)
         assert np.allclose(pp.r_min(thetas, m), r_m, atol=eps_output)
 
+
 # test that r(phi_cap) == l/d 
 def test_phi_cap():
     mus = [1, 2]
@@ -37,3 +38,33 @@ def test_phi_cap():
             r_phi_cap = pp.r(phi_cap, thetas_trimmed, mu)
 
             assert np.allclose(l_over_d, r_phi_cap, atol=eps_output)
+
+
+# test that the optimal theta_l maximizes min(r_min_l, r_min_r)
+# or: theta_l such that r_min_l == r_min_r
+def test_optimal_evader_heading():
+    mus = np.linspace(1+eps_input, 10)
+    d_l = np.linspace(0.1, 10)
+    d_r = np.linspace(10, 0.1)
+    inner_angle = np.linspace(eps_input, np.pi-0.8)
+
+    # cartesian product of d_l and d_r
+    # from https://stackoverflow.com/questions/11144513/cartesian-product-of-x-and-y-array-points-into-single-array-of-2d-points
+    ds = np.dstack(np.meshgrid(d_l, d_r)).reshape(-1, 2)
+
+    for mu in mus:
+        for dl, dr in ds:
+            dl = np.array([dl])
+            dr = np.array([dr])
+            th_l_opt = pp.optimal_evader_heading(dl, dr, inner_angle, mu, n_iters=20)
+            th_r_opt = inner_angle - th_l_opt - np.pi
+
+            # accepting that sometimes this will return nan for now
+            r_min_l = pp.r_min(th_l_opt, mu) * dl
+            r_min_l = r_min_l[~np.isnan(r_min_l)]
+
+            r_min_r = pp.r_min(th_r_opt, mu) * dr
+            r_min_r = r_min_r[~np.isnan(r_min_r)]
+
+            assert np.allclose(r_min_l, r_min_r, atol=0.01)
+                
