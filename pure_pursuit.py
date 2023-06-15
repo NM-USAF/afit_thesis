@@ -162,11 +162,13 @@ def deriv_r_min_theta(theta, mu):
 
 
 def optimal_evader_heading(
-    d_left, d_right, angle_between, mu, n_iters=3
+    evader_distance_ratio, lod_left, lod_right, angle_between, mu, n_iters=3
 ):
     """
-    d_left: distance to the left evader
-    d_right: distance to the right evader
+    evader_distance_ratio: distance to left evader divided by distance to
+                           the right evader
+    lod_left: capture radius over distance of the left pursuer
+    lod_right: capture radius over distance of the right pursuer
     angle_between: angle between the two evaders
     mu: speed ratio (identical for both evaders)
     n_iters: number of iterations of newton's method to use. default is 3.
@@ -186,7 +188,9 @@ def optimal_evader_heading(
         note: theta_r = angle_between - theta_l - pi
     """
 
-    # gamma used in place of angle_between for comments below
+    # gamma used in place of angle_between, and kd in place of 
+    # evader_distance_ratio for comments below
+    kd = evader_distance_ratio
 
     # initial guess: half of the angle between pursuers
     # alpha_0 = gamma / 2 & theta_l = alpha - pi/2 
@@ -194,22 +198,22 @@ def optimal_evader_heading(
     th_l = (angle_between - np.pi) / 2
 
     for _ in range(n_iters):
-        # goal: find theta_l such that r_min_l == r_min_r
-        # or s.t. r_min_l - r_min_r = 0
-        # where r_min_x = r(phi_m_x)/d_x * d/x
+        # goal: find theta_l s.t. (r_min_l*kd - lod_left*kd) == (r_min_r - lod_right) > 0
+        # or s.t. (r_min_l*kd - l_left*kd) - (r_min_r - l_right) = 0
+        # where r_min_x = r(phi_m_x)
 
-        # so f = r_min_l - r_min_r 
+        # so f = r_min_l*kd - r_min_r + l_right - l_left*kd
         # in th_l_n+1 = th_l_n - f(th_l_n) / f'(th_l_n)
-        # so f' = d(r_min_l)/d(th_l) - d(r_min_r)/d(th_r) * d(th_r)/d(th_l)
+        # so f' = d(r_min_l)/d(th_l)*kd - d(r_min_r)/d(th_r) * d(th_r)/d(th_l)
         # where d(th_r) / d(th_l) = -1 from note in function description
         # so f' = d(r_min_l)/d(th_l) + d(r_min_r)/d(th_r)
 
         th_r = angle_between - th_l - np.pi
 
-        f_th_l = r_min(th_l, mu)*d_left - r_min(th_r, mu)*d_right
+        f_th_l = r_min(th_l, mu)*kd - r_min(th_r, mu) + lod_right - lod_left*kd
         df_th_l = (
-            deriv_r_min_theta(th_l, mu)*d_left 
-            + deriv_r_min_theta(th_r, mu)*d_right
+            deriv_r_min_theta(th_l, mu)*kd 
+            + deriv_r_min_theta(th_r, mu)
         )
 
         th_l -= f_th_l / df_th_l
