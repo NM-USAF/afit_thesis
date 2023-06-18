@@ -134,8 +134,8 @@ def r_min(theta, mu):
 
 def deriv_r_min_theta(theta, mu):
     """
-    derivative of r_min with respect to theta. Used for finding optimal evader
-    headings with Newton's method.
+    derivative of r_min with respect to theta.
+    used in optimal_evader_heading.
     theta: evader's heading
     mu: speed ratio
 
@@ -151,20 +151,23 @@ def deriv_r_min_theta(theta, mu):
 
     deriv = np.power(a, 1/mu) * b / c
 
-    # clear out invalid results
+    # clear out invalid results in accordance with the implementation of r_min
     invalid = theta > np.arcsin(1 / mu)
     if isinstance(deriv, np.ndarray):
         deriv[invalid] = 0
-    else:
+    elif invalid:
         deriv = 0
 
     return deriv
 
 
 def optimal_evader_heading(
-    evader_distance_ratio, lod_left, lod_right, angle_between, mu, n_iters=3
+    evader_distance_ratio, lod_left, lod_right, mu_left, mu_right, angle_between, n_iters=3
 ):
     """
+    Newton's method approximation of the optimal constant evader heading given
+    the engagement conditions.
+
     evader_distance_ratio: distance to left evader divided by distance to
                            the right evader
     lod_left: capture radius over distance of the left pursuer
@@ -178,11 +181,6 @@ def optimal_evader_heading(
     NOTE: this function will diverge and return NAN on occasion if
           angle_between is near pi or near zero, mu is large, or 
           one pursuer is much closer than the other.
-          this is (mostly) guaranteed to work for all values within:
-          - 0.01 < d_left / d_right < 0.01
-          - 1.001 < mu < 10
-          - 0.001 < angle_between < pi-0.8
-
 
     returns theta_l
         note: theta_r = angle_between - theta_l - pi
@@ -210,18 +208,16 @@ def optimal_evader_heading(
 
         th_r = angle_between - th_l - np.pi
 
-        f_th_l = r_min(th_l, mu)*kd - r_min(th_r, mu) + lod_right - lod_left*kd
+        f_th_l = r_min(th_l, mu_left)*kd - r_min(th_r, mu_right) + lod_right - lod_left*kd
         df_th_l = (
-            deriv_r_min_theta(th_l, mu)*kd 
-            + deriv_r_min_theta(th_r, mu)
+            deriv_r_min_theta(th_l, mu_left)*kd 
+            + deriv_r_min_theta(th_r, mu_right)
         )
-
+        
         th_l -= f_th_l / df_th_l
 
         # intelligently clip to valid bounds
-        th_l = np.fmod(th_l, 2*np.pi)
-        th_l[th_l > np.pi] -= 2*np.pi
-        th_l[th_l < -np.pi] += 2*np.pi
+        th_l = (th_l + np.pi) % (2 * np.pi) - np.pi
 
         th_l = np.where(th_l < -np.pi/2, -th_l - np.pi, th_l)
 
