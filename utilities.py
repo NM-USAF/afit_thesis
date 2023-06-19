@@ -12,8 +12,23 @@ def law_of_cosines_angle(a, b, c):
     return np.arccos((a**2 + b**2 - c**2) / (2*a*b))
 
 
-def wrap(value, max):
+def wrap(value, max_val):
     """
-    wraps value to the range [-max, max]
+    wraps value to the range [-max_val, max_val]
     """
-    return (value + max) % (2 * max) - max
+    return (value + max_val) % (2 * max_val) - max_val
+
+
+def mirror(value, point):
+    """
+    mirrors a value across a point. mirroring across 0 is the same as negation.
+    example: mirror(1, 3) = 5
+    """
+    return point - (value - point)
+
+
+def fix_theta(theta):
+    wrapped = wrap(theta, np.pi)
+    mirr_hi = np.where(wrapped > np.pi/2, mirror(wrapped, np.pi/2), wrapped)
+    mirr_lo = np.where(mirr_hi < -np.pi/2, mirror(mirr_hi, -np.pi/2), mirr_hi)
+    return mirr_lo

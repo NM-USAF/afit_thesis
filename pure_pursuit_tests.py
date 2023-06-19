@@ -1,6 +1,7 @@
 import pytest
 import numpy as np
 import pure_pursuit as pp
+import utilities
 
 eps_input = 0.001
 eps_output = 1e-6
@@ -42,7 +43,7 @@ def test_phi_cap():
 
 # test that the optimal theta_l maximizes min(r_min_l, r_min_r)
 # or: theta_l such that r_min_l == r_min_r
-@pytest.skip("Needs fixing after adding capture radius")
+@pytest.mark.skip("Needs fixing after adding capture radius")
 def test_optimal_evader_heading():
     mus = np.linspace(1+eps_input, 10)
     d_l = np.linspace(0.1, 10)
@@ -69,3 +70,8 @@ def test_optimal_evader_heading():
 
             assert np.allclose(r_min_l, r_min_r, atol=0.01)
                 
+
+def test_fix_theta():
+    thetas = np.linspace(-20, 20, 4000)
+    fixed = utilities.fix_theta(thetas)
+    assert np.all((fixed <= np.pi/2) & (fixed >= -np.pi/2))

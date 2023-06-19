@@ -134,6 +134,8 @@ def r_min(theta, mu):
 
     returns r_m / d
     """
+    theta = utilities.fix_theta(theta)
+
     ct = np.cos(theta)
     st = np.sin(theta)
     
@@ -162,6 +164,7 @@ def deriv_r_min_theta(theta, mu):
 
     returns d/dtheta r_m / d
     """
+    theta = utilities.fix_theta(theta)
     st = np.sin(theta)
     ct = np.cos(theta)
     m2 = mu**2
@@ -187,7 +190,7 @@ def optimal_evader_heading(
     lod_left, lod_right, 
     mu_left, mu_right, 
     angle_between, 
-    n_iters=3
+    n_iters=10
 ):
     """
     Newton's method approximation of the optimal constant evader heading given
@@ -199,8 +202,8 @@ def optimal_evader_heading(
     lod_right: capture radius over distance of the right pursuer
     angle_between: angle between the two evaders
     mu: speed ratio (identical for both evaders)
-    n_iters: number of iterations of newton's method to use. default is 3.
-             Emperically, typically no more than 3 iterations are needed for
+    n_iters: number of iterations of newton's method to use. default is 5.
+             Emperically, typically no more than 5 iterations are needed for
              acceptable precision.
 
     NOTE: this function will diverge and return NAN on occasion if
@@ -233,21 +236,21 @@ def optimal_evader_heading(
 
         th_r = angle_between - th_l - np.pi
 
-        f_th_l = r_min(th_l, mu_left)*kd - r_min(th_r, mu_right) + lod_right - lod_left*kd
+        r_l = r_min(th_l, mu_left)
+        r_r = r_min(th_r, mu_right)
+        f_th_l = r_l*kd - r_r + lod_right - lod_left*kd
         df_th_l = (
             deriv_r_min_theta(th_l, mu_left)*kd 
             + deriv_r_min_theta(th_r, mu_right)
         )
+
+        if df_th_l == 0:
+            return th_l
         
         th_l -= f_th_l / df_th_l
 
         # intelligently clip to valid bounds
-        th_l = utilities.wrap(th_l, np.pi)
-
-        th_l = np.where(th_l < -np.pi/2, -th_l - np.pi, th_l)
-
-        max_th_l = angle_between - np.pi/2
-        th_l = np.where(th_l > max_th_l, 3*max_th_l - 2*th_l, th_l)
+        th_l = utilities.fix_theta(th_l)
 
     return th_l
 

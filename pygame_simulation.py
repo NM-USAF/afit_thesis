@@ -75,38 +75,32 @@ class Engagement2v1():
     def __init__(
         self, 
         e:EvaderWorldState, 
-        pw_1:PursuerWorldState,
-        pw_2:PursuerWorldState
+        pw_l:PursuerWorldState,
+        pw_r:PursuerWorldState
     ):
         # evader saved only for conversion purposes
         self.evader = e
-        pe_1 = world_to_engagement(e, pw_1)
-        pe_2 = world_to_engagement(e, pw_2)
+        self.p_left = world_to_engagement(e, pw_l)
+        self.p_right = world_to_engagement(e, pw_r)
 
         # determine "left" and "right" pursuers
         # 2d cross product (x1*y2 - x2*y1) = ||v1||*||v2||*sin(theta)
         # where 'theta' is the angle between the vectors.
         # So 'left' = v2 and 'right' = v1 -> v1 x v2 > 0
-        delta_x_p1 = pw_1.x - e.x
-        delta_y_p1 = pw_1.y - e.y
-        delta_x_p2 = pw_2.x - e.x
-        delta_y_p2 = pw_2.y - e.y
-
-        cross = (delta_x_p1 * delta_y_p2) - (delta_x_p2 * delta_y_p1)
+        delta_x_pl = pw_l.x - e.x
+        delta_y_pl = pw_l.y - e.y
+        delta_x_pr = pw_r.x - e.x
+        delta_y_pr = pw_r.y - e.y
 
         # also determine the angle between pursuers using the same math while we
         # have all the variables lying around
-        dot = delta_x_p1 * delta_x_p2 + delta_y_p1 * delta_y_p2
-
-        if cross >= 0:
-            self.p_left = pe_2
-            self.p_right = pe_1
-        elif cross < 0:
-            self.p_left = pe_1
-            self.p_right = pe_2
-
+        dot = delta_x_pl * delta_x_pr + delta_y_pl * delta_y_pr
         self.angle_between = np.arccos(dot / self.p_left.r / self.p_right.r)
 
+        # the angle from right to left should be positive
+        cross = (delta_x_pr * delta_y_pl) - (delta_x_pl * delta_y_pr)
+        if cross < 0:
+            self.angle_between = 2*np.pi - self.angle_between
 
 
     def optimal_evader_heading(self):
@@ -115,8 +109,7 @@ class Engagement2v1():
             self.p_left.l / self.p_left.r, 
             self.p_right.l / self.p_right.r,
             self.p_left.mu, self.p_right.mu,
-            self.angle_between,
-            n_iters=10
+            self.angle_between
         )
 
         min_d = pp.r_min(theta_l, self.p_left.mu) * self.p_left.r - self.p_left.l
@@ -174,18 +167,14 @@ class PurePursuitScenario():
         for i_r, i_l in zip(indices[:-1], indices[1:]):
             eng = Engagement2v1(
                 self.evader, 
-                self.pursuers[i_r], 
-                self.pursuers[i_l]
+                self.pursuers[i_l], 
+                self.pursuers[i_r]
             )
             heading, distance = eng.optimal_evader_heading()
             headings.append(heading)
             distances.append(distance)
 
         max_i = np.nanargmax(distances)
-
-        print("-----------")
-        print(headings)
-        print(distances)
 
         return headings[max_i], distances[max_i]
     
@@ -230,6 +219,11 @@ class MouseController():
         p.l += amount
         if p.l < 0:
             p.l = 0
+
+    def increase_capture_radius(self, amount):
+        set_to = self.scenario.pursuers[0].l + amount
+        for p in self.scenario.pursuers:
+            p.l = set_to
 
     def add_pursuer_at(self, mouse_x, mouse_y):
         new_pursuer = PursuerWorldState(
@@ -328,7 +322,7 @@ class PyGameView():
             self.controller.handle_mouse_move(x, y)
         elif pygame_event.type == pygame.MOUSEWHEEL:
             amount = pygame_event.y * 0.1
-            self.controller.handle_mouse_scroll(x, y, amount)
+            self.controller.increase_capture_radius(amount)
         elif pygame_event.type == pygame.MOUSEBUTTONDOWN:
             if not pygame.mouse.get_pressed()[0]:
                 # not left mouse button
@@ -343,6 +337,8 @@ class PyGameView():
 
 
 if __name__ == "__main__":
+
+    np.seterr(all="raise")
 
     sc = PurePursuitScenario(world_size=20)
 
