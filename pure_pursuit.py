@@ -1,4 +1,25 @@
 import numpy as np
+import utilities
+
+
+def rdot(phi, theta, mu):
+    """
+    dr/dt
+    phi: the pursuer's heading
+    theta: the evader's heading
+    mu: speed ratio (v_E / v_P)
+    """
+    return mu * np.cos(phi - theta) - 1
+
+
+def phi_dot(r, phi, theta, mu):
+    """
+    dphi/dt
+    r: distance from pursuer to evader
+    phi: the pursuer's heading
+    theta: the evader's heading
+    """
+    return -mu * np.sin(phi - theta) / r
 
 
 def r(phi, theta, mu):
@@ -162,7 +183,11 @@ def deriv_r_min_theta(theta, mu):
 
 
 def optimal_evader_heading(
-    evader_distance_ratio, lod_left, lod_right, mu_left, mu_right, angle_between, n_iters=3
+    evader_distance_ratio, 
+    lod_left, lod_right, 
+    mu_left, mu_right, 
+    angle_between, 
+    n_iters=3
 ):
     """
     Newton's method approximation of the optimal constant evader heading given
@@ -217,7 +242,7 @@ def optimal_evader_heading(
         th_l -= f_th_l / df_th_l
 
         # intelligently clip to valid bounds
-        th_l = (th_l + np.pi) % (2 * np.pi) - np.pi
+        th_l = utilities.wrap(th_l, np.pi)
 
         th_l = np.where(th_l < -np.pi/2, -th_l - np.pi, th_l)
 

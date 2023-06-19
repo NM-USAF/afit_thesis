@@ -11,3 +11,9 @@ def law_of_cosines_angle(a, b, c):
     # https://en.wikipedia.org/wiki/Law_of_cosines#Use_in_solving_triangles
     return np.arccos((a**2 + b**2 - c**2) / (2*a*b))
 
+
+def wrap(value, max):
+    """
+    wraps value to the range [-max, max]
+    """
+    return (value + max) % (2 * max) - max
