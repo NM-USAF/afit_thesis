@@ -243,9 +243,6 @@ def optimal_evader_heading(
             deriv_r_min_theta(th_l, mu_left)*kd 
             + deriv_r_min_theta(th_r, mu_right)
         )
-
-        if df_th_l == 0:
-            return th_l
         
         th_l -= f_th_l / df_th_l
 
