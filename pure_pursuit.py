@@ -155,6 +155,25 @@ def r_min(theta, mu):
     return r_m
 
 
+def r_min_range_params():
+    """
+    computes parameters for lines that bound r_min
+
+    returns (m_l, b_l, m_u, b_u) 
+    such that m_l*theta + b_l < r_min(theta)/d < m_u*theta+b_u
+    """
+    offset = (np.sqrt(np.pi**2 - 4) - 2*np.arccos(2/np.pi)) / np.pi
+    
+    # r_min/d > theta/pi + (1-c)/2
+    # r_min/d < theta*2/pi + (1+c)
+    # where c is offset above
+    m_l = 1/np.pi
+    b_l = (1-offset)/2
+    m_u = 2/np.pi
+    b_u = 1+offset
+
+    return (m_l, b_l, m_u, b_u)
+
 def deriv_r_min_theta(theta, mu):
     """
     derivative of r_min with respect to theta.
@@ -250,6 +269,59 @@ def optimal_evader_heading(
         th_l = utilities.fix_theta(th_l)
 
     return th_l
+
+
+def optimal_evader_heading_region(
+    d_left, d_right,
+    lod_left, lod_right,
+    angle_between
+):
+    """
+    Returns the left, right, bottom, top bounds that the optimal evader heading
+    and capture margin must be within
+    """
+    l_left = lod_left*d_left
+    l_right = lod_right*d_right
+
+    # capture margin is d*r_min - l
+    # so bound is at d*m*theta + d*b - l
+    # theta_r = gamma - theta_l - pi
+    # so right bound is at d*m*(gamma - theta - pi) + d*b - l
+    # or -d*m*theta + d*(m*(gamma - pi) + b) - l
+    
+    # for two lines y=mx+b,
+    # intersection is at x = (m1 - m2) / (b2 - b1)
+    # from equations above:
+    m_l, b_l, m_u, b_u = r_min_range_params()
+
+    ml_l, bl_l = utilities.compose_linear(d_left, -l_left, m_l, b_l)
+    ml_u, bl_u = utilities.compose_linear(d_left, -l_left, m_u, b_u)
+
+    mr_l, br_l = utilities.compose_linear(m_l, b_l, -1, angle_between - np.pi)
+    mr_u, br_u = utilities.compose_linear(m_u, b_u, -1, angle_between - np.pi)
+    mr_l, br_l = utilities.compose_linear(d_right, -l_right, mr_l, br_l)
+    mr_u, br_u = utilities.compose_linear(d_right, -l_right, mr_u, br_u)
+
+    # intersection of right lower and left upper and vice versa gives domain
+    # of theta. Both thetas are theta_l
+    theta_1 = (mr_l - ml_u) / (bl_u - br_l)
+    theta_2 = (mr_u - ml_l) / (bl_l - br_u)
+    min_theta = np.minimum(theta_1, theta_2)
+    max_theta = np.maximum(theta_1, theta_2)
+
+    print(ml_l, ml_u, bl_l, bl_u)
+
+    # the left/right lines have slopes negative to each other, so the
+    # upper-upper and lower-lower intersections will be at the midpoints
+    # of the lower-upper and upper-lower intersections. I think. Trust me.
+    mid_theta = (min_theta + max_theta) / 2
+    lower_r = ml_l * mid_theta + bl_l
+    upper_r = ml_u * mid_theta + bl_u
+
+    lower_r = np.maximum(lower_r, min(-lod_left*d_left, -lod_right*d_right))
+    upper_r = np.minimum(upper_r, max(d_left*(1-lod_left), d_right*(1-lod_right)))
+
+    return (min_theta, max_theta, lower_r, upper_r)
 
 
 def polygon_formation_capture_ratio_d(mu, n):
