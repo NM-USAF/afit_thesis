@@ -1,205 +1,17 @@
-from collections import namedtuple
-from dataclasses import dataclass
-import numpy as np
 import pygame
-import pure_pursuit as pp
-import utilities
-
-# velocity components are not needed because a pure pursuer always travels
-# towards the evader's position
-@dataclass
-class PursuerWorldState:
-    x: float
-    y: float
-    v: float
-    l: float
-
-# evader theta is in the world frame
-# theta = 0 is in the positive x direction
-@dataclass
-class EvaderWorldState:
-    x: float
-    y: float
-    v: float
-    theta: float
-
-# theta necessary here because it will be different for each pursuer
-# theta must be between -pi/2 and pi/2, so parity exists to indicate that
-# theta in the original pursuer frame lied outside that range - the evader's 
-# trajectory is to the left of the pursuer (parity=-1) instead of the right
-# (parity = 1)
-PursuerEngagementState = namedtuple(
-    "PursuerEngagementState",
-    ["r", "phi", "mu", "l", "theta", "parity"]
-)
-
-
-def world_to_engagement(e:EvaderWorldState, p:PursuerWorldState):
-    """
-    converts a world-frame state of a pursuer/evader pair into an initial
-    engagement state for the pursuer
-    """
-    delta_x = p.x - e.x
-    delta_y = p.y - e.y
-    r = np.hypot(delta_x, delta_y)
-    mu = e.v / p.v
-
-    # because this is the start of the engagement, 
-    # psi = phi - theta and phi(0) = pi/2 -> theta = pi/2 - psi
-    psi = np.arctan2(-delta_y, -delta_x) - e.theta
-    psi = utilities.wrap(psi, np.pi)
-
-    # theta in [-pi/2, pi/2] -> psi in [0, pi]
-    parity = np.sign(psi)
-    psi = np.abs(psi)
-    theta_p = np.pi/2 - psi
-
-    return PursuerEngagementState(r, np.pi/2, mu, p.l, theta_p, parity)
-
-
-def engagement_to_world(e:EvaderWorldState, p:PursuerEngagementState):
-    v = e.v / p.mu
+import numpy as np
+from simulation_core import *
     
-    psi = (p.phi - p.theta) * p.parity
-    psi_world = psi + e.theta
-    delta_x = -p.r * np.cos(psi_world)
-    delta_y = -p.r * np.sin(psi_world)
-    return PursuerWorldState(e.x + delta_x, e.y + delta_y, v, p.l)
-
-
-class Engagement2v1():
-    """
-    2 pursuers trying to catch 1 evader
-    """
-
-    def __init__(
-        self, 
-        e:EvaderWorldState, 
-        pw_l:PursuerWorldState,
-        pw_r:PursuerWorldState
-    ):
-        # evader saved only for conversion purposes
-        self.evader = e
-        self.p_left = world_to_engagement(e, pw_l)
-        self.p_right = world_to_engagement(e, pw_r)
-
-        # determine "left" and "right" pursuers
-        # 2d cross product (x1*y2 - x2*y1) = ||v1||*||v2||*sin(theta)
-        # where 'theta' is the angle between the vectors.
-        # So 'left' = v2 and 'right' = v1 -> v1 x v2 > 0
-        delta_x_pl = pw_l.x - e.x
-        delta_y_pl = pw_l.y - e.y
-        delta_x_pr = pw_r.x - e.x
-        delta_y_pr = pw_r.y - e.y
-
-        # also determine the angle between pursuers using the same math while we
-        # have all the variables lying around
-        dot = delta_x_pl * delta_x_pr + delta_y_pl * delta_y_pr
-        self.angle_between = np.arccos(dot / self.p_left.r / self.p_right.r)
-
-        # the angle from right to left should be positive
-        cross = (delta_x_pr * delta_y_pl) - (delta_x_pl * delta_y_pr)
-        if cross < 0:
-            self.angle_between = 2*np.pi - self.angle_between
-
-
-    def optimal_evader_heading(self):
-        theta_l = pp.optimal_evader_heading(
-            self.p_left.r / self.p_right.r,
-            self.p_left.l / self.p_left.r, 
-            self.p_right.l / self.p_right.r,
-            self.p_left.mu, self.p_right.mu,
-            self.angle_between
-        )
-
-        min_d = pp.r_min(theta_l, self.p_left.mu) * self.p_left.r - self.p_left.l
-
-        p_left_w = engagement_to_world(self.evader, self.p_left)
-        delta_x = p_left_w.x - self.evader.x
-        delta_y = p_left_w.y - self.evader.y
-        angle = np.arctan2(delta_y, delta_x)
-
-        return angle - theta_l - np.pi/2, min_d
-
-
-class PurePursuitScenario():
-    """
-    N pursuers against one evader
-    Evader is at (0, 0)
-    """
-
-    def __init__(self, world_size=10):
-        self.pursuers = []
-        self.world_size = world_size
-
-        self.evader = EvaderWorldState(
-            0, 0, 3, 0
-        )
-
-    def add_pursuer(self, p:PursuerWorldState):
-        self.add_pursuers([p])
-
-    def add_pursuers(self, ps):
-        self.pursuers += ps
-
-    def get_nearest_index(self, wx, wy, min_dist=None):
-        xs = np.array([ wx - p.x for p in self.pursuers ])
-        ys = np.array([ wy - p.y for p in self.pursuers ])
-        dists = np.hypot(xs, ys)
-
-        if min_dist and np.min(dists) < min_dist:
-            return np.argmin(np.hypot(xs, ys))
-        
-        return -1
-    
-
-    def optimal_evader_heading(self):
-        xs = np.array([ p.x - self.evader.x for p in self.pursuers ])
-        ys = np.array([ p.y - self.evader.y for p in self.pursuers ])
-        angles = np.arctan2(ys, xs)
-        indices = np.argsort(angles)
-        indices = np.append(indices, indices[0])
-
-        headings = []
-        distances = []
-
-        # adjacent pairs of pursuers
-        for i_r, i_l in zip(indices[:-1], indices[1:]):
-            eng = Engagement2v1(
-                self.evader, 
-                self.pursuers[i_l], 
-                self.pursuers[i_r]
-            )
-            heading, distance = eng.optimal_evader_heading()
-            headings.append(heading)
-            distances.append(distance)
-
-        max_i = np.nanargmax(distances)
-
-        return headings[max_i], distances[max_i]
-    
-
-    def optimize_evader_heading(self):
-        opt_heading, opt_dist = self.optimal_evader_heading()
-        if np.isnan(opt_heading):
-            self.evader.theta = 0
-        else:
-            self.evader.theta = opt_heading
-        return opt_dist
-
     
 class MouseController():
-    def __init__(self, scenario:PurePursuitScenario):
+    def __init__(self, scenario:EngagementModel):
         self.scenario = scenario
-        self.active_pursuer_index = -1
+        self.active_pursuer = None
         self.moving_pursuer = False
-
-    def get_active_pursuer(self):
-        return self.scenario.pursuers[self.active_pursuer_index]
 
     def handle_mouse_down(self, mouse_x, mouse_y):
         # pick it up
-        if self.active_pursuer_index >= 0:
+        if self.active_pursuer:
             self.moving_pursuer = True
 
     def handle_mouse_up(self, mouse_x, mouse_y):
@@ -207,18 +19,17 @@ class MouseController():
 
     def handle_mouse_move(self, mouse_x, mouse_y):
         if self.moving_pursuer:
-            p = self.get_active_pursuer()
-            p.x = mouse_x
-            p.y = mouse_y
+            self.active_pursuer.x = mouse_x
+            self.active_pursuer.y = mouse_y
         else:
-            idx = self.scenario.get_nearest_index(mouse_x, mouse_y, min_dist=0.3)
-            self.active_pursuer_index = idx
+            self.active_pursuer = self.scenario.get_nearest_pursuer(
+                mouse_x, mouse_y, 0.3
+            )
 
     def handle_mouse_scroll(self, mouse_x, mouse_y, amount):
-        p = self.get_active_pursuer()
-        p.l += amount
-        if p.l < 0:
-            p.l = 0
+        self.active_pursuer.l += amount
+        if self.active_pursuer.l < 0:
+            self.active_pursuer.l = 0
 
     def increase_capture_radius(self, amount):
         set_to = self.scenario.pursuers[0].l + amount
@@ -229,22 +40,33 @@ class MouseController():
         new_pursuer = PursuerWorldState(
             mouse_x,
             mouse_y,
-            1,
+            1.9,
             1.0
         )
         self.scenario.add_pursuer(new_pursuer)
+
+    def simulate(self):
+        self.scenario.simulate(10)
+
 
 PURSUER_COLOR = "red"
 EVADER_COLOR = "blue"
 WORLD_AGENT_RADIUS = 0.2
 class PyGameView():
-    def __init__(self, scenario, controller, canvas_size=300):
+    def __init__(
+            self, 
+            scenario:EngagementModel, 
+            controller, 
+            canvas_size=300, 
+            world_size=20
+        ):
         self.scenario = scenario
         self.controller = controller
         self.canvas_size = canvas_size
 
-        self.world_canvas_ratio = canvas_size / scenario.world_size
+        self.world_canvas_ratio = canvas_size / world_size
         self.screen = pygame.display.set_mode((canvas_size, canvas_size))
+        self.show_simulation = False
 
 
     def world_to_canvas(self, world_x, world_y):
@@ -268,6 +90,20 @@ class PyGameView():
         pos = self.world_to_canvas(origin_x, origin_y)
 
         pygame.draw.line(self.screen, color, pos, end, **kwargs)
+
+
+    def draw_path(self, p_world_path):
+        path = [
+            self.world_to_canvas(p.x, p.y)
+            for p in p_world_path
+        ]
+
+        pygame.draw.lines(
+            self.screen,
+            PURSUER_COLOR,
+            False,
+            path
+        )
 
 
     def render_pursuer(self, p_world:PursuerWorldState, e_world:EvaderWorldState):
@@ -304,8 +140,15 @@ class PyGameView():
         if not scenario:
             scenario = self.scenario
             
+        if self.show_simulation:
+            times = np.linspace(0, 5)
+            e_path, p_paths = self.scenario.get_state_for_times(times)
+            for i in range(len(p_paths[0])):
+                path = [ p_paths[t][i] for t in range(len(p_paths)) ]
+                self.draw_path(path)
+
         e = scenario.evader
-        for p in scenario.pursuers:
+        for p in scenario.world_pursuers:
             self.render_pursuer(p, e)
 
         self.render_evader(e)
@@ -315,9 +158,14 @@ class PyGameView():
         distance_margin = self.scenario.optimize_evader_heading()
         self.success = distance_margin > 0
 
-        
+    
+    def switch_to_simulation():
+        pass
+
+
     def handle_event(self, pygame_event):
         x, y = self.canvas_to_world(*pygame.mouse.get_pos())
+
         if pygame_event.type == pygame.MOUSEMOTION:
             self.controller.handle_mouse_move(x, y)
         elif pygame_event.type == pygame.MOUSEWHEEL:
@@ -332,6 +180,13 @@ class PyGameView():
                 self.controller.add_pursuer_at(x, y)
             else:
                 self.controller.handle_mouse_down(x, y)
+        elif pygame_event.type == pygame.KEYDOWN:
+            if pygame_event.key == pygame.K_SPACE:
+                self.controller.simulate()
+                self.show_simulation = True
+        elif pygame_event.type == pygame.KEYUP:
+            if pygame_event.key == pygame.K_SPACE:
+                self.show_simulation = False
         elif pygame_event.type == pygame.MOUSEBUTTONUP:
             self.controller.handle_mouse_up(x, y)
 
@@ -340,7 +195,8 @@ if __name__ == "__main__":
 
     np.seterr(all="raise")
 
-    sc = PurePursuitScenario(world_size=20)
+    sc = PurePursuitScenario()
+    sc.evader.v = 2
 
     ct = MouseController(sc)
     ct.add_pursuer_at(5, 2)

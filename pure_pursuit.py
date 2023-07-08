@@ -2,9 +2,9 @@ import numpy as np
 import utilities
 
 
-def rdot(phi, theta, mu):
+def r_dot(phi, theta, mu):
     """
-    dr/dt
+    dr/dt * 1/vp
     phi: the pursuer's heading
     theta: the evader's heading
     mu: speed ratio (v_E / v_P)
@@ -14,7 +14,7 @@ def rdot(phi, theta, mu):
 
 def phi_dot(r, phi, theta, mu):
     """
-    dphi/dt
+    dphi/dt * 1/vp
     r: distance from pursuer to evader
     phi: the pursuer's heading
     theta: the evader's heading
@@ -273,9 +273,11 @@ def optimal_evader_heading(
 
     for _ in range(n_iters):
         th_l = optimize_evader_heading(
+            th_l, 
             evader_distance_ratio,
             lod_left, lod_right,
-            mu_left, mu_right
+            mu_left, mu_right,
+            angle_between
         )
 
     return th_l
