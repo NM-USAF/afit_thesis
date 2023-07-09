@@ -323,9 +323,6 @@ class PurePursuitScenario(EngagementModel):
             self.simulated_pursuer_states[i,:,PursuerEngagementState.phi_idx] = phi
             self.simulated_pursuer_states[i,:,PursuerEngagementState.r_idx] = r
 
-        print(self.simulated_pursuer_states[:,0,PursuerEngagementState.r_idx])
-        # print(engagement_thetas)
-
 
     def evader_at_time(self, t):
         d = self.evader.v * t
