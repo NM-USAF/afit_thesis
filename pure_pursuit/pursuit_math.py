@@ -94,7 +94,7 @@ def t_cap_1(theta, lod, mu):
     """
     time to capture
     theta: evader's heading (constant)
-    mu: speed ratio (>= 1)
+    mu: speed ratio (1 or 2)
     lod: l/d; l is capture range, d is start distance
 
     returns t_c / d

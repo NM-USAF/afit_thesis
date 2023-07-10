@@ -177,44 +177,8 @@ def plot_example_multiple_pursuit_min_r(n_pursuers=5):
 
     for i in range(n_pursuers):
         label = fr"$\mu={mus[i]:.2f}, d={distances[i]:.2f}, l={lods[i]*distances[i]:.2f}, \theta={headings[i]:.2f}$"
-        for j in range(n_pursuers):
-            if i == j:
-                continue
-            l, r, b, t = pp.optimal_evader_heading_region(
-                distances[i], distances[j],
-                lods[i], lods[j],
-                headings[i] - headings[j]
-            )
-            l += headings[i] + np.pi/2
-            r += headings[i] + np.pi/2
-            # plt.vlines([l, r], b, t)
-            # rect = patch.Rectangle(
-            #     (l, b), 
-            #     (r - l),
-            #     (t - b),
-            #     alpha=0.1
-            # )
-            # plt.gca().add_patch(rect)
-            print(l, r, b, t)
 
         plt.plot(theta_e, r_minus_l[:,i], label=label)   
-        t_p = utilities.fix_theta(theta_p[:,i])
-        r_l_bound = ml*(t_p) + bl
-        r_u_bound = mu*(t_p) + bu
-
-        print(min(r_l_bound))
-
-        max_t_p = np.arcsin(1/mus[i])
-        where_valid = (
-            (t_p > -np.pi/2) & (t_p < max_t_p) |
-            ((t_p > 3/2*np.pi) & (t_p < utilities.mirror(max_t_p, np.pi/2)))
-        )
-        r_l_bound = r_l_bound[where_valid]
-        r_u_bound = r_u_bound[where_valid]
-        theta_e_less = theta_e[where_valid]
-
-        # plt.scatter(theta_e_less, distances[i]*(r_l_bound - lods[i]), s=1)
-        # plt.scatter(theta_e_less, distances[i]*(r_u_bound - lods[i]), s=1)
 
     plt.plot(theta_e, np.min(r_minus_l, axis=1), color="black", label=r"minimum capture margin")
     plt.title("Minimum pursuer-evader capture margin for multiple pursuers")
@@ -290,7 +254,7 @@ if __name__ == "__main__":
     plot_optimal_evader_heading(1, 5, 20)
     saver.save("optimal_evader_heading")
 
-    plot_example_multiple_pursuit_min_r(2)
+    plot_example_multiple_pursuit_min_r(5)
     saver.save(
         "multiple_pursuit_min_dist",
         bbox_inches="tight"
