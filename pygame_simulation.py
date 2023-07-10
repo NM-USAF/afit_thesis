@@ -40,7 +40,7 @@ class MouseController():
         new_pursuer = PursuerWorldState(
             mouse_x,
             mouse_y,
-            1.9,
+            1.0,
             1.0
         )
         self.scenario.add_pursuer(new_pursuer)
@@ -188,6 +188,7 @@ class PyGameView():
             if pygame_event.type == pygame.KEYDOWN:
                 if pygame_event.key == pygame.K_SPACE:
                     self.show_simulation = False
+                    self.simulation_time = 0
 
 
         else:
@@ -202,7 +203,8 @@ class PyGameView():
                     return 
                 if pygame.key.get_mods() & pygame.KMOD_CTRL:
                     # control is pressed, add a new pursuer
-                    self.controller.add_pursuer_at(x, y)
+                    # self.controller.add_pursuer_at(x, y)
+                    pass
                 else:
                     self.controller.handle_mouse_down(x, y)
             elif pygame_event.type == pygame.KEYDOWN:

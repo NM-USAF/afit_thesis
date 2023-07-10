@@ -196,9 +196,9 @@ class Engagement2v1():
 
         # the angle from right to left should be positive
         cross = (delta_x_pr * delta_y_pl) - (delta_x_pl * delta_y_pr)
-        if cross < 0:
-            self.angle_between = 2*np.pi - self.angle_between
-
+        if cross > 0:
+            # self.angle_between = 2*np.pi - self.angle_between
+            self.p_left, self.p_right = self.p_right, self.p_left
 
     def optimal_evader_heading(self):
         theta_l = pp.optimal_evader_heading(
@@ -264,23 +264,32 @@ class PurePursuitScenario(EngagementModel):
         indices = np.argsort(angles)
         indices = np.append(indices, indices[0])
 
-        headings = []
-        distances = []
+        # headings = []
+        # distances = []
 
         # adjacent pairs of world_pursuers
-        for i_r, i_l in zip(indices[:-1], indices[1:]):
-            eng = Engagement2v1(
-                self.evader, 
-                self.world_pursuers[i_l], 
-                self.world_pursuers[i_r]
-            )
-            heading, distance = eng.optimal_evader_heading()
-            headings.append(heading)
-            distances.append(distance)
+        # for i_r, i_l in zip(indices[:-1], indices[1:]):
+        #     eng = Engagement2v1(
+        #         self.evader, 
+        #         self.world_pursuers[i_l], 
+        #         self.world_pursuers[i_r]
+        #     )
+        #     heading, distance = eng.optimal_evader_heading()
+        #     headings.append(heading)
+        #     distances.append(distance)
 
-        max_i = np.nanargmax(distances)
+        # max_i = np.nanargmax(distances)
 
-        return headings[max_i], distances[max_i]
+        # print(distances)
+
+        # return headings[max_i], distances[max_i]
+
+        eng = Engagement2v1(
+            self.evader, self.world_pursuers[0], self.world_pursuers[1]
+        )
+
+        heading, distance = eng.optimal_evader_heading()
+        return heading, distance
     
     
     def simulate(self, t_max):

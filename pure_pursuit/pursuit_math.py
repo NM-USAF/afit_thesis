@@ -126,6 +126,18 @@ def phi_min(theta, mu):
         return np.clip(np.arccos(1/mu) + theta, -np.pi/2, np.pi/2)
 
 
+def theta_max(mu):
+    """
+    the largest value of theta for which the evader can be caught at all.
+    If `theta > theta_max`, then the evader will flee from the evader faster
+    than the evader can travel - the distance from the pursuer to evader will
+    only increase as time increases.
+
+    mu: speed ratio
+    """
+    return np.arcsin(1 / mu)
+
+
 def r_min(theta, mu):
     """
     the closest the pursuer will get to the evader for mu >= 1
@@ -145,7 +157,7 @@ def r_min(theta, mu):
     )
 
     # another way of constraining phi_m < pi/2
-    invalid = theta > np.arcsin(1/mu)
+    invalid = theta > theta_max(mu)
 
     if isinstance(r_m, np.ndarray):
         r_m[invalid] = 1
@@ -154,25 +166,6 @@ def r_min(theta, mu):
 
     return r_m
 
-
-def r_min_range_params():
-    """
-    computes parameters for lines that bound r_min
-
-    returns (m_l, b_l, m_u, b_u) 
-    such that m_l*theta + b_l < r_min(theta)/d < m_u*theta+b_u
-    """
-    offset = (np.sqrt(np.pi**2 - 4) - 2*np.arccos(2/np.pi)) / np.pi
-    
-    # r_min/d > theta/pi + (1-c)/2
-    # r_min/d < theta*2/pi + (1+c)
-    # where c is offset above
-    m_l = 1/np.pi
-    b_l = (1-offset)/2
-    m_u = 2/np.pi
-    b_u = 1+offset
-
-    return (m_l, b_l, m_u, b_u)
 
 def deriv_r_min_theta(theta, mu):
     """
@@ -195,7 +188,7 @@ def deriv_r_min_theta(theta, mu):
     deriv = np.power(a, 1/mu) * b / c
 
     # clear out invalid results in accordance with the implementation of r_min
-    invalid = theta > np.arcsin(1 / mu)
+    invalid = theta > theta_max(mu)
     if isinstance(deriv, np.ndarray):
         deriv[invalid] = 0
     elif invalid:

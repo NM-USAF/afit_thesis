@@ -1,6 +1,36 @@
 import numpy as np
 from .pursuit_math import *
 
+
+def can_escape_simple(
+    mu_left, mu_right,
+    angle_between
+):
+    """
+    Can the evader escapt by simply accepting a heading such that:
+    `theta_l > theta_max_l & theta_r > theta_max_r`
+    or: such that neither of the pursuers can actually get any closer to the
+    evader as time increases.
+
+    returns (can_escape :: bool, theta_l :: float)
+    """
+    theta_max_l = theta_max(mu_left)
+    theta_max_r = theta_max(mu_right)
+
+    angle_between_max = np.pi - theta_max_l - theta_max_r
+
+    # evader is pointing away from the pursuers
+    angle_between_min = angle_between
+
+    can_escape = angle_between_max > angle_between_min
+
+    # half of the angle between pursuers is as good as any other heading
+    # within the range where theta_l > theta_max_l, theta_r > theta_max_r
+    theta_l = (np.pi - angle_between) / 2
+
+    return can_escape, theta_l
+
+
 def optimize_evader_heading(
     theta_left,
     evader_distance_ratio, 
@@ -39,17 +69,23 @@ def optimize_evader_heading(
 
     r_l = r_min(theta_left, mu_left)
     r_r = r_min(th_r, mu_right)
+    
     f_th_l = r_l*kd - r_r + lod_right - lod_left*kd
     df_th_l = (
         deriv_r_min_theta(theta_left, mu_left)*kd 
         + deriv_r_min_theta(th_r, mu_right)
     )
     
+    # if the derivative is zero, we are either at a minimum already
+    # or we are at the plateau where simple escape is possible
+    if np.all(df_th_l == 0):
+        return theta_left
+
     # intelligently clip to valid bounds
     return utilities.fix_theta(theta_left - f_th_l / df_th_l)
 
 
-def optimal_evader_heading(
+def optimal_evader_heading_newtons(
     evader_distance_ratio, 
     lod_left, lod_right, 
     mu_left, mu_right, 
@@ -93,3 +129,37 @@ def optimal_evader_heading(
         )
 
     return th_l
+
+
+def optimal_evader_heading(
+    evader_distance_ratio, 
+    lod_left, lod_right, 
+    mu_left, mu_right, 
+    angle_between, 
+    **kwargs
+):
+    # First test: simple escape, no optimization necessary
+    can, theta_l_simple = can_escape_simple(mu_left, mu_right, angle_between)
+
+    if np.all(can):
+        return theta_l_simple
+
+    theta_l_optimize = optimal_evader_heading_newtons(
+        evader_distance_ratio,
+        lod_left,
+        lod_right,
+        mu_left,
+        mu_right,
+        angle_between,
+        **kwargs
+    )
+
+    if isinstance(theta_l_simple, np.ndarray):
+        # something
+        return np.where(can, theta_l_simple, theta_l_optimize)
+    elif can:
+        return theta_l_simple
+    else:
+        return theta_l_optimize
+    
+    
