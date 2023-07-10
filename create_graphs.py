@@ -2,6 +2,8 @@ import numpy as np
 import pure_pursuit as pp
 import matplotlib.pyplot as plt
 import matplotlib
+import matplotlib.patches as patch
+import utilities
 
 plt.rcParams["axes.titlesize"] = 10 # for big titles
 cmap = matplotlib.colormaps['viridis']
@@ -125,6 +127,16 @@ def plot_min_r(mu_min, mu_max, n_lines=100):
         r_m = pp.r_min(theta, mu[i])
         plt.plot(theta, r_m, color=cmap(i/n_lines))
 
+    plt.plot(theta, (1+np.sin(theta))/2, color="black", label=f"limits at $\mu=1$ and $\mu=\inf$")
+    plt.plot(theta, np.where(theta < 0, np.cos(theta), 1), color="black")
+
+    m_l, b_l, m_u, b_u = pp.r_min_range_params()
+
+    plt.plot(theta, m_l * theta + b_l)
+    plt.plot(theta, m_u * theta + b_u)
+
+    plt.legend()
+
     custom_colorbar(mu_min, mu_max, label=r"$\mu$")
 
 
@@ -133,20 +145,97 @@ def plot_optimal_evader_heading(mu_min, mu_max, n_lines=100):
     mu = np.linspace(mu_min, mu_max, n_lines)
     dr_over_dl = np.linspace(0, 2.99, n_points)
 
-    plt.title(r"Optimal evader heading for pursuers with the same capture radius and a gap of $\frac{\pi}{3}$")
+    plt.title(r"Optimal evader heading for two identical pursuers with a gap of $\frac{\pi}{3}$ between them")
     plt.xlabel(r"Pursuer distance ratio $\frac{d_l}{d_r}$")
     plt.ylabel(r"Optimal constant evader heading from left pursuer $\theta_l$")
 
     dl = np.ones(len(dr_over_dl))
     dr = dr_over_dl
+    angle_between = np.ones(len(dr_over_dl)) * np.pi/3
     for i in range(n_lines):
-        angle_between = np.ones(len(dr_over_dl)) * np.pi/3
-        th_l = pp.optimal_evader_heading(dl, dr, angle_between, mu[i])
+        th_l = pp.optimal_evader_heading(dl/dr, 1, 1, angle_between, mu[i], mu[i])
         
         plt.plot(dr_over_dl, th_l, color=cmap(i/n_lines))
 
     custom_colorbar(mu_min, mu_max, label=r"$\mu$")
 
+
+def plot_example_multiple_pursuit_min_r(n_pursuers=5):
+    headings = np.random.uniform(-np.pi, np.pi, n_pursuers)
+    distances = np.random.uniform(1.5, 5, n_pursuers)
+    lods = np.random.uniform(0.1, 0.7, n_pursuers)
+    mus = np.random.uniform(1.1, 5, n_pursuers)
+
+    theta_e = np.linspace(-np.pi, np.pi, 314)
+
+    theta_p = utilities.wrap(theta_e[:,None] - headings - np.pi/2, np.pi)
+    
+    rod_min = pp.r_min(theta_p, mus)
+    r_minus_l = (rod_min - lods) * distances
+
+    ml, bl, mu, bu = pp.r_min_range_params()
+
+    for i in range(n_pursuers):
+        label = fr"$\mu={mus[i]:.2f}, d={distances[i]:.2f}, l={lods[i]*distances[i]:.2f}, \theta={headings[i]:.2f}$"
+        for j in range(n_pursuers):
+            if i == j:
+                continue
+            l, r, b, t = pp.optimal_evader_heading_region(
+                distances[i], distances[j],
+                lods[i], lods[j],
+                headings[i] - headings[j]
+            )
+            l += headings[i] + np.pi/2
+            r += headings[i] + np.pi/2
+            # plt.vlines([l, r], b, t)
+            # rect = patch.Rectangle(
+            #     (l, b), 
+            #     (r - l),
+            #     (t - b),
+            #     alpha=0.1
+            # )
+            # plt.gca().add_patch(rect)
+            print(l, r, b, t)
+
+        plt.plot(theta_e, r_minus_l[:,i], label=label)   
+        t_p = utilities.fix_theta(theta_p[:,i])
+        r_l_bound = ml*(t_p) + bl
+        r_u_bound = mu*(t_p) + bu
+
+        print(min(r_l_bound))
+
+        max_t_p = np.arcsin(1/mus[i])
+        where_valid = (
+            (t_p > -np.pi/2) & (t_p < max_t_p) |
+            ((t_p > 3/2*np.pi) & (t_p < utilities.mirror(max_t_p, np.pi/2)))
+        )
+        r_l_bound = r_l_bound[where_valid]
+        r_u_bound = r_u_bound[where_valid]
+        theta_e_less = theta_e[where_valid]
+
+        # plt.scatter(theta_e_less, distances[i]*(r_l_bound - lods[i]), s=1)
+        # plt.scatter(theta_e_less, distances[i]*(r_u_bound - lods[i]), s=1)
+
+    plt.plot(theta_e, np.min(r_minus_l, axis=1), color="black", label=r"minimum capture margin")
+    plt.title("Minimum pursuer-evader capture margin for multiple pursuers")
+    plt.xlabel(r"Evader world frame heading $\theta_e$ in $[-\pi, \pi]$")
+    plt.ylabel(r"Capture margin $r_min - l$")
+    plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
+
+
+class PlotSaver():
+    def __init__(self, output_path, format):
+        self.output_path = output_path
+        self.format = format
+
+    def save(self, name, **kwargs):
+        plt.savefig(
+            f"{args.output}/{name}.{args.format}", 
+            bbox_extra_artists=(plt.gca().get_children())    ,
+            **kwargs
+        )
+        plt.cla()
+        plt.clf()
 
 if __name__ == "__main__":
     import argparse
@@ -166,6 +255,10 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
+    saver = PlotSaver(args.output, args.format)
+
+    np.set_printoptions(precision=2)
+
     if not os.path.isdir(args.output):
         os.mkdir(args.output)
 
@@ -173,35 +266,32 @@ if __name__ == "__main__":
 
     for mu in [0.1, 0.5, 0.75, 0.99, 1, 1.01, 1.25, 1.5, 2, 3]:
         plot_r(mu, n_lines)
-        plt.savefig(f"{args.output}/r_mu_{mu}.{args.format}")
-        plt.cla()
-        plt.clf()
+        saver.save(f"r_mu_{mu}")
 
     for mu in [1, 2]:
         plot_phi_cap(mu, n_lines)
-        plt.savefig(f"{args.output}/phi_cap_mu_{mu}.{args.format}")
-        plt.cla()
-        plt.clf()
+        saver.save(f"phi_cap_mu_{mu}")
 
         plot_t_cap(mu, n_lines)
-        plt.savefig(f"{args.output}/t_cap_mu_{mu}.{args.format}")
-        plt.cla()
-        plt.clf()
+        saver.save(f"t_cap_mu_{mu}")
 
-    plot_min_r(1, 4, n_lines)
-    plt.savefig(f"{args.output}/r_min.{args.format}")
-    plt.cla()
-    plt.clf()
+    plot_min_r(1, 10, n_lines*2)
+    saver.save("r_min")
 
     plot_mu_capture_ratio(2, 3, 12)
-    plt.savefig(f"{args.output}/poly_dist_cap.{args.format}")
-    plt.cla()
-    plt.clf()
+    saver.save("poly_dist_cap")
 
     plot_capture_ratio(
         np.linspace(1, 4, 13),
         np.arange(3, 16)
     )
-    plt.savefig(f"{args.output}/poly_dist_cap_3d.{args.format}")
-    plt.cla()
-    plt.clf()
+    saver.save("poly_dist_cap_3d")
+
+    plot_optimal_evader_heading(1, 5, 20)
+    saver.save("optimal_evader_heading")
+
+    plot_example_multiple_pursuit_min_r(2)
+    saver.save(
+        "multiple_pursuit_min_dist",
+        bbox_inches="tight"
+    )

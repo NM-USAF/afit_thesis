@@ -49,6 +49,7 @@ def optimize_evader_heading(
     if df_th_l == 0:
         return theta_left
     
+    # intelligently clip to valid bounds
     return utilities.fix_theta(theta_left - f_th_l / df_th_l)
 
 

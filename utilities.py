@@ -32,3 +32,7 @@ def fix_theta(theta):
     mirr_hi = np.where(wrapped > np.pi/2, mirror(wrapped, np.pi/2), wrapped)
     mirr_lo = np.where(mirr_hi < -np.pi/2, mirror(mirr_hi, -np.pi/2), mirr_hi)
     return mirr_lo
+
+
+def compose_linear(m1, b1, m2, b2):
+    return m1*m2, m1*b1 + b2
