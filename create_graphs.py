@@ -128,6 +128,7 @@ def plot_min_r(mu_min, mu_max, n_lines=100):
     custom_colorbar(mu_min, mu_max, label=r"$\mu$")
 
 
+# note: needs to be fixed
 def plot_optimal_evader_heading(mu_min, mu_max, n_lines=100):
     mu = np.linspace(mu_min, mu_max, n_lines)
     dr_over_dl = np.linspace(0, 2.99, n_points)
@@ -202,10 +203,5 @@ if __name__ == "__main__":
         np.arange(3, 16)
     )
     plt.savefig(f"{args.output}/poly_dist_cap_3d.{args.format}")
-    plt.cla()
-    plt.clf()
-
-    plot_optimal_evader_heading(1, 5, 20)
-    plt.savefig(f"{args.output}/optimal_evader_heading.{args.format}")
     plt.cla()
     plt.clf()
