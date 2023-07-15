@@ -206,7 +206,8 @@ class Engagement2v1():
             self.p_left.l / self.p_left.r, 
             self.p_right.l / self.p_right.r,
             self.p_left.mu, self.p_right.mu,
-            self.angle_between
+            self.angle_between,
+            method="scipy"
         )
 
         min_d = pp.r_min(theta_l, self.p_left.mu) * self.p_left.r - self.p_left.l
@@ -323,10 +324,12 @@ class PurePursuitScenario(EngagementModel):
             dphi_dt = pp.phi_dot(r_last, phi_last, engagement_thetas, engagement_mus) * engagement_vs
 
             phi_next = phi_last + dphi_dt * dt
+            phi_next = np.clip(phi_next, engagement_thetas, np.pi/2)
             r_next = pp.r(phi_next, engagement_thetas, engagement_mus) * engagement_ds
             dphi_dt_next = pp.phi_dot(r_next, phi_next, engagement_thetas, engagement_mus) * engagement_vs
 
             phi = phi_last + (dphi_dt + dphi_dt_next) / 2 * dt
+            phi = np.clip(phi, engagement_thetas, np.pi/2)
             r = pp.r(phi, engagement_thetas, engagement_mus) * engagement_ds
 
             self.simulated_pursuer_states[i,:,PursuerEngagementState.phi_idx] = phi

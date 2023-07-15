@@ -1,5 +1,6 @@
 import numpy as np
 from .pursuit_math import *
+from scipy.optimize import minimize_scalar
 
 
 def can_escape_simple(
@@ -31,7 +32,7 @@ def can_escape_simple(
     return can_escape, theta_l
 
 
-def optimize_evader_heading(
+def optimize_evader_heading_newton(
     theta_left,
     evader_distance_ratio, 
     lod_left, lod_right, 
@@ -69,7 +70,7 @@ def optimize_evader_heading(
 
     r_l = r_min(theta_left, mu_left)
     r_r = r_min(th_r, mu_right)
-    
+
     f_th_l = r_l*kd - r_r + lod_right - lod_left*kd
     df_th_l = (
         deriv_r_min_theta(theta_left, mu_left)*kd 
@@ -85,7 +86,7 @@ def optimize_evader_heading(
     return utilities.fix_theta(theta_left - f_th_l / df_th_l)
 
 
-def optimal_evader_heading_newtons(
+def optimal_evader_heading_newton(
     evader_distance_ratio, 
     lod_left, lod_right, 
     mu_left, mu_right, 
@@ -120,7 +121,7 @@ def optimal_evader_heading_newtons(
     th_l = (angle_between - np.pi) / 2
 
     for _ in range(n_iters):
-        th_l = optimize_evader_heading(
+        th_l = optimize_evader_heading_newton(
             th_l, 
             evader_distance_ratio,
             lod_left, lod_right,
@@ -131,11 +132,47 @@ def optimal_evader_heading_newtons(
     return th_l
 
 
+def negative_relu(x):
+    return np.where(x < 0, x, 0)
+
+
+def optimal_evader_heading_scipy(
+    evader_distance_ratio,
+    lod_left, lod_right,
+    mu_left, mu_right,
+    angle_between
+):
+    """
+    Finds the optimal constant evader heading theta by minimizing the negative
+    of the closest that either evader will come to the pursuer.
+    """
+
+    def to_optimize(theta):
+        th_r = angle_between - theta - np.pi
+        """
+        theta = theta_left
+        """
+        return -negative_relu(np.min([
+            r_min(theta, mu_left) - lod_left,
+            (r_min(th_r, mu_right) - lod_right) / evader_distance_ratio
+        ]))
+    
+    result = minimize_scalar(
+        to_optimize, 
+        method="bounded", 
+        bounds=(-np.pi, np.pi)
+    )
+
+    print(result.fun)
+    return result.x
+
+
 def optimal_evader_heading(
     evader_distance_ratio, 
     lod_left, lod_right, 
     mu_left, mu_right, 
     angle_between, 
+    method="newton",
     **kwargs
 ):
     # First test: simple escape, no optimization necessary
@@ -144,22 +181,31 @@ def optimal_evader_heading(
     if np.all(can):
         return theta_l_simple
 
-    theta_l_optimize = optimal_evader_heading_newtons(
-        evader_distance_ratio,
-        lod_left,
-        lod_right,
-        mu_left,
-        mu_right,
-        angle_between,
-        **kwargs
-    )
+    if method == "newton":
+        theta_l_optimize = optimal_evader_heading_newton(
+            evader_distance_ratio,
+            lod_left,
+            lod_right,
+            mu_left,
+            mu_right,
+            angle_between,
+            **kwargs
+        )
 
-    if isinstance(theta_l_simple, np.ndarray):
-        # something
-        return np.where(can, theta_l_simple, theta_l_optimize)
-    elif can:
-        return theta_l_simple
-    else:
+        if isinstance(theta_l_simple, np.ndarray):
+            return np.where(can, theta_l_simple, theta_l_optimize)
+        elif can:
+            return theta_l_simple
+        else:
+            return theta_l_optimize
+    elif method == "scipy":
+        theta_l_optimize = optimal_evader_heading_scipy(
+            evader_distance_ratio,
+            lod_left,
+            lod_right,
+            mu_left,
+            mu_right,
+            angle_between
+        )
+
         return theta_l_optimize
-    
-    

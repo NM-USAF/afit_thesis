@@ -26,15 +26,13 @@ class MouseController():
                 mouse_x, mouse_y, 0.3
             )
 
-    def handle_mouse_scroll(self, mouse_x, mouse_y, amount):
-        self.active_pursuer.l += amount
-        if self.active_pursuer.l < 0:
-            self.active_pursuer.l = 0
-
-    def increase_capture_radius(self, amount):
+    def increase_capture_radius_all(self, amount):
         set_to = self.scenario.pursuers[0].l + amount
         for p in self.scenario.pursuers:
             p.l = set_to
+
+    def increase_capture_radius(self, amount):
+        self.active_pursuer.l += amount
 
     def add_pursuer_at(self, mouse_x, mouse_y):
         new_pursuer = PursuerWorldState(
@@ -67,8 +65,9 @@ class PyGameView():
         self.world_canvas_ratio = canvas_size / world_size
         self.screen = pygame.display.set_mode((canvas_size, canvas_size))
 
-        self.show_simulation = False
+        self.play_simulation = False
         self.simulation_time = 0
+        self.max_sim_time = 5
 
 
     def world_to_canvas(self, world_x, world_y):
@@ -141,42 +140,47 @@ class PyGameView():
     def render_scenario(self, scenario:PurePursuitScenario=None):
         if not scenario:
             scenario = self.scenario
-            
-        if self.show_simulation:
-            times = np.linspace(0, 5)
-            e_path, p_paths = self.scenario.get_state_for_times(times)
+        
+        # draw pursuer/evader paths
+        times = np.linspace(0, self.max_sim_time)
+        e_path, p_paths = self.scenario.get_state_for_times(times)
 
-            for i in range(len(p_paths[0])):
-                path = [ p_paths[t][i] for t in range(len(p_paths)) ]
-                self.draw_path(path, PURSUER_COLOR)
+        for i in range(len(p_paths[0])):
+            path = [ p_paths[t][i] for t in range(len(p_paths)) ]
+            self.draw_path(path, PURSUER_COLOR)
 
-            self.draw_path(e_path, EVADER_COLOR)
+        self.draw_path(e_path, EVADER_COLOR)
 
-            e, ps = self.scenario.get_state_for_time(self.simulation_time)
+        # draw the pursuer/evader locations
+        e, ps = self.scenario.get_state_for_time(self.simulation_time)
 
-            self.render_evader(e)
-            for p in ps:
-                self.render_pursuer(p, e)
-
-        else:
-            e = scenario.evader
-            for p in scenario.world_pursuers:
-                self.render_pursuer(p, e)
-
-            self.render_evader(e)
+        self.render_evader(e)
+        for p in ps:
+            self.render_pursuer(p, e)
 
 
     def step_game(self):
         distance_margin = self.scenario.optimize_evader_heading()
 
-        if self.show_simulation:            
+        self.controller.simulate()
+
+        if self.play_simulation:
+            self.simulation_time += 1/30
+            if self.simulation_time > self.max_sim_time:
+                self.simulation_time = 0
+                self.play_simulation = False
+        else:            
             keys = pygame.key.get_pressed()
             if keys[pygame.K_RIGHT]:
                 self.simulation_time += 1/30
             elif keys[pygame.K_LEFT]:
                 self.simulation_time -= 1/30
 
-            self.simulation_time = np.clip(self.simulation_time, 0, 10)
+            self.simulation_time = np.clip(
+                self.simulation_time, 
+                0, 
+                self.max_sim_time
+            )
         
         self.success = distance_margin > 0
 
@@ -184,35 +188,26 @@ class PyGameView():
     def handle_event(self, pygame_event):
         x, y = self.canvas_to_world(*pygame.mouse.get_pos())
 
-        if self.show_simulation:
-            if pygame_event.type == pygame.KEYDOWN:
-                if pygame_event.key == pygame.K_SPACE:
-                    self.show_simulation = False
-                    self.simulation_time = 0
-
-
-        else:
-            if pygame_event.type == pygame.MOUSEMOTION:
-                self.controller.handle_mouse_move(x, y)
-            elif pygame_event.type == pygame.MOUSEWHEEL:
-                amount = pygame_event.y * 0.1
-                self.controller.increase_capture_radius(amount)
-            elif pygame_event.type == pygame.MOUSEBUTTONDOWN:
-                if not pygame.mouse.get_pressed()[0]:
-                    # not left mouse button
-                    return 
-                if pygame.key.get_mods() & pygame.KMOD_CTRL:
-                    # control is pressed, add a new pursuer
-                    # self.controller.add_pursuer_at(x, y)
-                    pass
-                else:
-                    self.controller.handle_mouse_down(x, y)
-            elif pygame_event.type == pygame.KEYDOWN:
-                if pygame_event.key == pygame.K_SPACE:
-                    self.controller.simulate()
-                    self.show_simulation = True
-            elif pygame_event.type == pygame.MOUSEBUTTONUP:
-                self.controller.handle_mouse_up(x, y)
+        if pygame_event.type == pygame.MOUSEMOTION:
+            self.controller.handle_mouse_move(x, y)
+        elif pygame_event.type == pygame.MOUSEWHEEL:
+            amount = pygame_event.y * 0.1
+            self.controller.increase_capture_radius(amount)
+        elif pygame_event.type == pygame.MOUSEBUTTONDOWN:
+            if not pygame.mouse.get_pressed()[0]:
+                # not left mouse button
+                return 
+            if pygame.key.get_mods() & pygame.KMOD_CTRL:
+                # control is pressed, add a new pursuer
+                # self.controller.add_pursuer_at(x, y)
+                pass
+            else:
+                self.controller.handle_mouse_down(x, y)
+        elif pygame_event.type == pygame.KEYDOWN:
+            if pygame_event.key == pygame.K_SPACE:
+                self.play_simulation = True
+        elif pygame_event.type == pygame.MOUSEBUTTONUP:
+            self.controller.handle_mouse_up(x, y)
 
 
 if __name__ == "__main__":
@@ -241,9 +236,9 @@ if __name__ == "__main__":
 
         pgv.screen.fill("white")
 
-        pgv.render_scenario()
-
         pgv.step_game()
+
+        pgv.render_scenario()
     
         pygame.display.flip()
 
