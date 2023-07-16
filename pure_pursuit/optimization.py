@@ -115,6 +115,10 @@ def optimal_evader_heading_newton(
         note: theta_r = angle_between - theta_l - pi
     """
 
+    # psi(0) = pi/2 - theta (phi(0) = pi/2)
+    # psi_l(0) + psi_r(0) = 2pi - angle_between
+    # pi/2 - theta_l + pi/2 - theta_r = 2pi - angle_between
+
     # initial guess: half of the angle between pursuers
     # alpha_0 = gamma / 2 & theta_l = alpha - pi/2 
     # -> theta_l_0 = (gamma - pi) / 2
@@ -132,10 +136,6 @@ def optimal_evader_heading_newton(
     return th_l
 
 
-def negative_relu(x):
-    return np.where(x < 0, x, 0)
-
-
 def optimal_evader_heading_scipy(
     evader_distance_ratio,
     lod_left, lod_right,
@@ -148,13 +148,21 @@ def optimal_evader_heading_scipy(
     """
 
     def to_optimize(theta):
-        th_r = angle_between - theta - np.pi
         """
         theta = theta_left
         """
-        return -negative_relu(np.min([
-            r_min(theta, mu_left) - lod_left,
-            (r_min(th_r, mu_right) - lod_right) / evader_distance_ratio
+
+        is_inside = (theta < -np.pi/2) & (theta > -np.pi/2-angle_between)
+
+        ab = np.where(~is_inside, 2*np.pi-angle_between, angle_between)
+
+        th_r = ab - theta - np.pi
+        rmin_l = r_min(theta, mu_left) - lod_left
+        rmin_r = (r_min(th_r, mu_right) - lod_right) / evader_distance_ratio
+
+        return -(np.min([
+            (rmin_l),
+            (rmin_r)
         ]))
     
     result = minimize_scalar(
@@ -163,7 +171,6 @@ def optimal_evader_heading_scipy(
         bounds=(-np.pi, np.pi)
     )
 
-    print(result.fun)
     return result.x
 
 

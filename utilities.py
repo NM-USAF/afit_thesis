@@ -28,6 +28,11 @@ def mirror(value, point):
 
 
 def fix_theta(theta):
+    """
+    for any theta in [-pi, pi] in the engagement frame, maps that theta to an
+    equivalent theta  in the range [-pi/2, pi/2] that can be used in the pure 
+    pursuit equations
+    """
     wrapped = wrap(theta, np.pi)
     mirr_hi = np.where(wrapped > np.pi/2, mirror(wrapped, np.pi/2), wrapped)
     mirr_lo = np.where(mirr_hi < -np.pi/2, mirror(mirr_hi, -np.pi/2), mirr_hi)
@@ -36,3 +41,7 @@ def fix_theta(theta):
 
 def compose_linear(m1, b1, m2, b2):
     return m1*m2, m1*b1 + b2
+
+
+def negative_relu(x):
+    return np.where(x < 0, x, 0)

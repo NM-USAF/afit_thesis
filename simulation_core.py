@@ -192,9 +192,11 @@ class Engagement2v1():
         # also determine the angle between pursuers using the same math while we
         # have all the variables lying around
         dot = delta_x_pl * delta_x_pr + delta_y_pl * delta_y_pr
-        self.angle_between = np.arccos(dot / self.p_left.r / self.p_right.r)
+        # extra help to make sure arccos works
+        dot_norm = np.clip(dot / self.p_left.r / self.p_right.r, -1, 1)
+        self.angle_between = np.arccos(dot_norm)
 
-        # the angle from right to left should be positive
+        # the angle from right to left should be positive (counter-clockwise)
         cross = (delta_x_pr * delta_y_pl) - (delta_x_pl * delta_y_pr)
         if cross > 0:
             # self.angle_between = 2*np.pi - self.angle_between
