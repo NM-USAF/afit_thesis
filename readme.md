@@ -14,6 +14,8 @@ Click and drag pursuers to move them around. The evader will choose an optimal h
 
 Mousewheel over a pursuer changes its capture radius.
 
+`crtl`+click adds a new pursuer.
+
 Press `space` to play the simulation.
 
 
@@ -21,6 +23,7 @@ Press `space` to play the simulation.
 
 `pip install requirements.txt`
 `python create_plots.py`
+
 
 ## Other
 
