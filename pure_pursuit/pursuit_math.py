@@ -1,5 +1,5 @@
 import numpy as np
-import utilities
+from . import utilities
 
 
 def r_dot(phi, theta, mu):

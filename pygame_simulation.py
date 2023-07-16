@@ -68,6 +68,7 @@ class PyGameView():
         self.play_simulation = False
         self.simulation_time = 0
         self.max_sim_time = 5
+        self.sim_time_dt = 1/10
 
 
     def world_to_canvas(self, world_x, world_y):
@@ -165,16 +166,16 @@ class PyGameView():
         self.controller.simulate()
 
         if self.play_simulation:
-            self.simulation_time += 1/30
+            self.simulation_time += self.sim_time_dt
             if self.simulation_time > self.max_sim_time:
                 self.simulation_time = 0
                 self.play_simulation = False
         else:            
             keys = pygame.key.get_pressed()
             if keys[pygame.K_RIGHT]:
-                self.simulation_time += 1/30
+                self.simulation_time += self.sim_time_dt
             elif keys[pygame.K_LEFT]:
-                self.simulation_time -= 1/30
+                self.simulation_time -= self.sim_time_dt
 
             self.simulation_time = np.clip(
                 self.simulation_time, 

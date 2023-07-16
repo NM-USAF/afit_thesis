@@ -3,7 +3,7 @@ import pure_pursuit as pp
 import matplotlib.pyplot as plt
 import matplotlib
 import matplotlib.patches as patch
-import utilities
+import pure_pursuit.utilities
 
 plt.rcParams["axes.titlesize"] = 10 # for big titles
 cmap = matplotlib.colormaps['viridis']
@@ -130,11 +130,6 @@ def plot_min_r(mu_min, mu_max, n_lines=100):
     plt.plot(theta, (1+np.sin(theta))/2, color="black", label=f"limits at $\mu=1$ and $\mu=\inf$")
     plt.plot(theta, np.where(theta < 0, np.cos(theta), 1), color="black")
 
-    m_l, b_l, m_u, b_u = pp.r_min_range_params()
-
-    plt.plot(theta, m_l * theta + b_l)
-    plt.plot(theta, m_u * theta + b_u)
-
     plt.legend()
 
     custom_colorbar(mu_min, mu_max, label=r"$\mu$")
@@ -168,12 +163,10 @@ def plot_example_multiple_pursuit_min_r(n_pursuers=5):
 
     theta_e = np.linspace(-np.pi, np.pi, 314)
 
-    theta_p = utilities.wrap(theta_e[:,None] - headings - np.pi/2, np.pi)
+    theta_p = pure_pursuit.utilities.wrap(theta_e[:,None] - headings - np.pi/2, np.pi)
     
     rod_min = pp.r_min(theta_p, mus)
     r_minus_l = (rod_min - lods) * distances
-
-    ml, bl, mu, bu = pp.r_min_range_params()
 
     for i in range(n_pursuers):
         label = fr"$\mu={mus[i]:.2f}, d={distances[i]:.2f}, l={lods[i]*distances[i]:.2f}, \theta={headings[i]:.2f}$"
@@ -183,7 +176,7 @@ def plot_example_multiple_pursuit_min_r(n_pursuers=5):
     plt.plot(theta_e, np.min(r_minus_l, axis=1), color="black", label=r"minimum capture margin")
     plt.title("Minimum pursuer-evader capture margin for multiple pursuers")
     plt.xlabel(r"Evader world frame heading $\theta_e$ in $[-\pi, \pi]$")
-    plt.ylabel(r"Capture margin $r_min - l$")
+    plt.ylabel(r"Capture margin $r_{min} - l$")
     plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
 
 

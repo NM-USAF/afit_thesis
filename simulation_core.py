@@ -1,7 +1,7 @@
 from dataclasses import dataclass, replace
 import numpy as np
 import pure_pursuit as pp
-import utilities
+import pure_pursuit.utilities as utilities
 from abc import ABC, abstractproperty, abstractmethod
 from typing import List, Tuple
 
@@ -266,26 +266,6 @@ class PurePursuitScenario(EngagementModel):
         angles = np.arctan2(ys, xs)
         indices = np.argsort(angles)
         indices = np.append(indices, indices[0])
-
-        # headings = []
-        # distances = []
-
-        # adjacent pairs of world_pursuers
-        # for i_r, i_l in zip(indices[:-1], indices[1:]):
-        #     eng = Engagement2v1(
-        #         self.evader, 
-        #         self.world_pursuers[i_l], 
-        #         self.world_pursuers[i_r]
-        #     )
-        #     heading, distance = eng.optimal_evader_heading()
-        #     headings.append(heading)
-        #     distances.append(distance)
-
-        # max_i = np.nanargmax(distances)
-
-        # print(distances)
-
-        # return headings[max_i], distances[max_i]
 
         eng = Engagement2v1(
             self.evader, self.world_pursuers[0], self.world_pursuers[1]

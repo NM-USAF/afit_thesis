@@ -199,7 +199,7 @@ def optimal_evader_heading(
             **kwargs
         )
 
-        if isinstance(theta_l_simple, np.ndarray):
+        if isinstance(can, np.ndarray):
             return np.where(can, theta_l_simple, theta_l_optimize)
         elif can:
             return theta_l_simple
