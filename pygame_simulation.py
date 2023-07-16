@@ -67,7 +67,7 @@ class PyGameView():
 
         self.play_simulation = False
         self.simulation_time = 0
-        self.max_sim_time = 5
+        self.max_sim_time = 10
         self.sim_time_dt = 1/10
 
 
