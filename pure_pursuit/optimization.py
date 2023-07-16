@@ -1,6 +1,6 @@
 import numpy as np
 from .pursuit_math import *
-from scipy.optimize import minimize_scalar
+from scipy.optimize import minimize_scalar, differential_evolution
 
 
 def can_escape_simple(
@@ -136,15 +136,22 @@ def optimal_evader_heading_newton(
     return th_l
 
 
+def negative_relu(x):
+    return np.where(x < 0, x, 0)
+
+
 def optimal_evader_heading_scipy(
-    evader_distance_ratio,
-    lod_left, lod_right,
-    mu_left, mu_right,
-    angle_between
+    lods,
+    mus,
+    headings,
+    method="multiple_local",
+    n_guesses=None
 ):
     """
     Finds the optimal constant evader heading theta by minimizing the negative
     of the closest that either evader will come to the pursuer.
+
+    returns: theta, min(r_min - l/d for each pursuer)
     """
 
     def to_optimize(theta):
@@ -152,26 +159,41 @@ def optimal_evader_heading_scipy(
         theta = theta_left
         """
 
-        is_inside = (theta < -np.pi/2) & (theta > -np.pi/2-angle_between)
+        pursuer_thetas, _ = utilities.engagement_heading(theta, headings)
+        rmins = r_min(pursuer_thetas, mus) - lods
 
-        ab = np.where(~is_inside, 2*np.pi-angle_between, angle_between)
-
-        th_r = ab - theta - np.pi
-        rmin_l = r_min(theta, mu_left) - lod_left
-        rmin_r = (r_min(th_r, mu_right) - lod_right) / evader_distance_ratio
-
-        return -(np.min([
-            (rmin_l),
-            (rmin_r)
-        ]))
+        return -np.min(rmins)
     
-    result = minimize_scalar(
-        to_optimize, 
-        method="bounded", 
-        bounds=(-np.pi, np.pi)
-    )
+    if method == "differential_evolution":
+        result = differential_evolution(
+            to_optimize, 
+            [[-np.pi, np.pi]],
+            popsize=len(lods+1),
+            seed=0
+        )
+        
+        return result.x[0], result.fun
 
-    return result.x
+    if method == "multiple_local":
+        if not n_guesses:
+            # number of guesses = number of pursuers + 1
+            n_guesses = len(lods) + 1
+
+        bounds = np.array([
+            np.arange(0, n_guesses),
+            np.arange(1, n_guesses+1)
+        ]).astype(float).T / (n_guesses) * 2 * np.pi
+
+        # run many local optimizations
+        results = [minimize_scalar(
+            to_optimize,
+            method="bounded",
+            bounds=b
+        ) for b in bounds]
+
+        res_min = min(results, key=lambda r: r.fun)
+
+        return res_min.x, res_min.fun
 
 
 def optimal_evader_heading(

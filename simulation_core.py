@@ -264,15 +264,22 @@ class PurePursuitScenario(EngagementModel):
         xs = np.array([ p.x - self.evader.x for p in self.world_pursuers ])
         ys = np.array([ p.y - self.evader.y for p in self.world_pursuers ])
         angles = np.arctan2(ys, xs)
-        indices = np.argsort(angles)
-        indices = np.append(indices, indices[0])
 
-        eng = Engagement2v1(
-            self.evader, self.world_pursuers[0], self.world_pursuers[1]
+        engagement_pursuers = [ 
+            world_to_engagement(self.evader, p) 
+            for p in self.world_pursuers 
+        ]
+
+        lods = np.array([ p.l / p.r for p in engagement_pursuers ])
+        mus = np.array([ p.mu for p in engagement_pursuers ])
+
+        heading, margin = pp.optimal_evader_heading_scipy(
+            lods,
+            mus,
+            angles
         )
 
-        heading, distance = eng.optimal_evader_heading()
-        return heading, distance
+        return heading, margin
     
     
     def simulate(self, t_max):

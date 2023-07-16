@@ -200,8 +200,7 @@ class PyGameView():
                 return 
             if pygame.key.get_mods() & pygame.KMOD_CTRL:
                 # control is pressed, add a new pursuer
-                # self.controller.add_pursuer_at(x, y)
-                pass
+                self.controller.add_pursuer_at(x, y)
             else:
                 self.controller.handle_mouse_down(x, y)
         elif pygame_event.type == pygame.KEYDOWN:

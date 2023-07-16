@@ -144,7 +144,7 @@ def r_min(theta, mu):
     theta: the evader's heading (constant)
     mu: speed ratio
 
-    returns r_m / d
+    returns min(r(t)) / d
     """
     theta = utilities.fix_theta(theta)
 

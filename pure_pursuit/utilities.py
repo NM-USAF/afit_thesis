@@ -45,3 +45,21 @@ def compose_linear(m1, b1, m2, b2):
 
 def negative_relu(x):
     return np.where(x < 0, x, 0)
+
+
+def engagement_heading(evader_heading, pursuer_angle):
+    """
+    Given the evader's heading in the world frame and the heading to a pursuer
+    in that frame, calculates a theta value that can be used in the pure 
+    pursuit equations.
+
+    returns (theta, parity)
+    parity=-1 means the evader's trajectory is to the left of the pursuer
+    instead of to the right. Necessary to convert back to world coordinates.
+    """
+    # theta = wrap(abs(pursuer_angle - evader_heading) - np.pi/2, np.pi)
+    psi = wrap((np.pi + pursuer_angle) - evader_heading, np.pi)
+    theta = np.pi/2 - abs(psi)
+    return theta, False
+    # psi = wrap(pursuer_angle - np.pi/2 - evader_heading, np.pi)
+    # return fix_theta(psi), abs(psi) > np.pi/2
