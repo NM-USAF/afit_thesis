@@ -136,6 +136,29 @@ def optimal_evader_heading_newton(
     return th_l
 
 
+def capture_heading_binary(
+    mu, lod, initial_max=np.pi/2, initial_min=-np.pi/2, n_iters=10
+):
+    """
+    Use a binary search to find the heading at which the evader is just barely
+    captured. Any heading larger than this, and the evader will escape - any 
+    lower, and the evader will definitely be captured.
+
+    mu: evader/pursuer speed ratio
+    lod: pursuer capture radius over initial distance
+    """
+    th_max = initial_max
+    th_min = initial_min
+    for _ in range(n_iters):
+        th_mid = (th_max + th_min) / 2
+        capture_margin = r_min(th_mid, mu) - lod
+
+        th_max = np.where(capture_margin > 0, th_mid, th_max)
+        th_min = np.where(capture_margin < 0, th_mid, th_min)
+
+    return th_mid
+
+
 def negative_relu(x):
     return np.where(x < 0, x, 0)
 

@@ -138,6 +138,17 @@ def theta_max(mu):
     return np.arcsin(1 / mu)
 
 
+def theta_min(lod):
+    """
+    The smallest value of theta for which the evader can escape at all. 
+    If `theta < theta_min`, then the evader will run into the pursuer's capture
+    range without the pursuer having moved at all.
+
+    lod: capture radius `l` divided by initial distance `d`
+    """
+    return np.arctan(lod)
+
+
 def r_min(theta, mu):
     """
     the closest the pursuer will get to the evader for mu >= 1
@@ -189,10 +200,7 @@ def deriv_r_min_theta(theta, mu):
 
     # clear out invalid results in accordance with the implementation of r_min
     invalid = theta > theta_max(mu)
-    if isinstance(deriv, np.ndarray):
-        deriv[invalid] = 0
-    elif invalid:
-        deriv = 0
+    deriv = np.where(invalid, 0, deriv)
 
     return deriv
 

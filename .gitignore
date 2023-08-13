@@ -5,3 +5,5 @@ next_tasks.txt
 *.png
 *.svg
 plots
+
+*_env

@@ -252,3 +252,9 @@ if __name__ == "__main__":
         "multiple_pursuit_min_dist",
         bbox_inches="tight"
     )
+
+    plot_example_multiple_pursuit_min_r(2)
+    saver.save(
+        "double_pursuit_min_dist",
+        bbox_inches="tight"
+    )

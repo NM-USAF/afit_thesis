@@ -53,13 +53,21 @@ def engagement_heading(evader_heading, pursuer_angle):
     in that frame, calculates a theta value that can be used in the pure 
     pursuit equations.
 
-    returns (theta, parity)
-    parity=-1 means the evader's trajectory is to the left of the pursuer
-    instead of to the right. Necessary to convert back to world coordinates.
+    returns (theta, direction)
+    direction=-1 means the evader's trajectory is to the right of the pursuer
+    instead of to the left. Necessary to convert back to world coordinates.
     """
-    # theta = wrap(abs(pursuer_angle - evader_heading) - np.pi/2, np.pi)
-    psi = wrap((np.pi + pursuer_angle) - evader_heading, np.pi)
-    theta = np.pi/2 - abs(psi)
-    return theta, False
-    # psi = wrap(pursuer_angle - np.pi/2 - evader_heading, np.pi)
-    # return fix_theta(psi), abs(psi) > np.pi/2
+    psi = wrap(pursuer_angle - evader_heading, np.pi)
+    theta = fix_theta(abs(psi) - np.pi/2)
+    direction = np.where(psi < 0, 1, -1)
+    return theta, direction
+
+def world_heading(evader_heading, pursuer_angle, direction=1):
+    """
+    Given the evader's heading in the pursuer frame and the heading to that
+    pursuer with which side of the pursuer it's on (left=1, right=-1),
+    calculates the world frame heading
+
+    returns (theta_w)
+    """
+    return wrap(pursuer_angle + direction * (evader_heading + np.pi/2), np.pi)
