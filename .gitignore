@@ -4,6 +4,9 @@ next_tasks.txt
 *.pdf
 *.png
 *.svg
+*.tex
+
+diagrams
 plots
 
 *_env

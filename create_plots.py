@@ -5,6 +5,8 @@ import matplotlib
 import matplotlib.patches as patch
 import pure_pursuit.utilities
 
+from plot_utils.saver import PlotSaver
+
 plt.rcParams["axes.titlesize"] = 10 # for big titles
 cmap = matplotlib.colormaps['viridis']
 
@@ -12,6 +14,8 @@ n_points = 100
 lod_min = 0.01
 lod_max = 0.99
 eps = 0.0000001 # numerical stability in arcsin and tan
+
+plt.rcParams["figure.figsize"] = (5, 3)
 
 def custom_colorbar(min, max, **kwargs):
     norm = matplotlib.colors.Normalize(min, max)
@@ -59,7 +63,7 @@ def plot_t_cap(mu, n_lines=100):
     # t_cap needs extra epsilon at the low end for a point near tan(pi/2)
     theta = np.linspace(-np.pi/2+0.1, th_max-eps, n_points)
     
-    plt.title(f"Distance Normalized Time to Capture against Evader Heading for $\mu={mu}$")
+    plt.title(f"Time to capture against evader heading for $\mu={mu}$")
     plt.xlabel(r"$\theta$")
     plt.ylabel(r"$\frac{t_c}{d}$", rotation=0)
 
@@ -169,30 +173,16 @@ def plot_example_multiple_pursuit_min_r(n_pursuers=5):
     r_minus_l = (rod_min - lods) * distances
 
     for i in range(n_pursuers):
-        label = fr"$\mu={mus[i]:.2f}, d={distances[i]:.2f}, l={lods[i]*distances[i]:.2f}, \theta={headings[i]:.2f}$"
+        label = fr"""$\mu={mus[i]:.2f}, d={distances[i]:.2f}$, 
+$l={lods[i]*distances[i]:.2f}, \gamma={headings[i]:.2f}$"""
 
         plt.plot(theta_e, r_minus_l[:,i], label=label)   
 
     plt.plot(theta_e, np.min(r_minus_l, axis=1), color="black", label=r"minimum capture margin")
-    plt.title("Minimum pursuer-evader capture margin for multiple pursuers")
-    plt.xlabel(r"Evader world frame heading $\theta_e$ in $[-\pi, \pi]$")
+    plt.title("Multiple pursuit capture margin")
+    plt.xlabel(r"Evader world frame heading $\theta_w$ in $[-\pi, \pi]$")
     plt.ylabel(r"Capture margin $r_{min} - l$")
     plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
-
-
-class PlotSaver():
-    def __init__(self, output_path, format):
-        self.output_path = output_path
-        self.format = format
-
-    def save(self, name, **kwargs):
-        plt.savefig(
-            f"{args.output}/{name}.{args.format}", 
-            bbox_extra_artists=(plt.gca().get_children())    ,
-            **kwargs
-        )
-        plt.cla()
-        plt.clf()
 
 if __name__ == "__main__":
     import argparse
@@ -221,19 +211,19 @@ if __name__ == "__main__":
 
     n_lines=50
 
-    for mu in [0.1, 0.5, 0.75, 0.99, 1, 1.01, 1.25, 1.5, 2, 3]:
+    for mu in [0.75, 1, 1.25, 2]:
         plot_r(mu, n_lines)
-        saver.save(f"r_mu_{mu}")
+        saver.save(f"r_mu_{mu}", latex=True)
 
     for mu in [1, 2]:
         plot_phi_cap(mu, n_lines)
-        saver.save(f"phi_cap_mu_{mu}")
+        saver.save(f"phi_cap_mu_{mu}", latex=True)
 
         plot_t_cap(mu, n_lines)
-        saver.save(f"t_cap_mu_{mu}")
+        saver.save(f"t_cap_mu_{mu}", latex=True)
 
     plot_min_r(1, 10, n_lines*2)
-    saver.save("r_min")
+    saver.save("r_min", latex=True)
 
     plot_mu_capture_ratio(2, 3, 12)
     saver.save("poly_dist_cap")
@@ -250,11 +240,16 @@ if __name__ == "__main__":
     plot_example_multiple_pursuit_min_r(5)
     saver.save(
         "multiple_pursuit_min_dist",
-        bbox_inches="tight"
+        bbox_inches="tight",
+        latex=True
     )
 
     plot_example_multiple_pursuit_min_r(2)
     saver.save(
         "double_pursuit_min_dist",
-        bbox_inches="tight"
+        bbox_inches="tight",
+        latex=True
     )
+
+    with open("figures.tex", "w") as f:
+        f.write(saver.to_latex())

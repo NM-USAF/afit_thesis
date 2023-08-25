@@ -71,3 +71,71 @@ def world_heading(evader_heading, pursuer_angle, direction=1):
     returns (theta_w)
     """
     return wrap(pursuer_angle + direction * (evader_heading + np.pi/2), np.pi)
+
+def inorder(l):
+    return l == sorted(l)
+
+def subtract_range(start1, end1, start2, end2):
+    """
+    Given an range [start1, end1], subtracts the set of numbers that fall
+    within (start2, end2) to return a new set of numbers. The resulting set 
+    may be discontinuous.
+    """
+    # start1 = a, end1 = b, start2 = c, end2 = d
+    
+    assert start1 < end1 and start2 < end2
+    
+    # case 1: a < b < c < d or c < d < a < b -> { [a, b] }
+    if (
+        inorder([start1, end1, start2, end2]) 
+        or inorder([start2, end2, start1, end1])
+    ):
+        return { (start1, end1) }
+    # case 2: c < a < b < d -> {}
+    elif inorder([start2, start1, end1, end2]):
+        return set()
+    # case 3: c < a < d < b -> { [d, b] }
+    elif inorder([start2, start1, end2, end1]):
+        return { (end2, end1) }
+    # case 4: a < c < b < d -> { [a, c] }
+    elif inorder([start1, start2, end1, end2]):
+        return { (start1, start2) }
+    # case 5: a < c < d < b -> { [a, c], [d, b] }
+    elif inorder([start1, start2, end2, end1]):
+        return { (start1, start2), (end2, end1) }
+
+
+def subtract_ranges(start_range, ranges):
+    """
+    Subtracts multiple sets of numbers `ranges` from the initlal range
+    `start_range`. 
+    """
+    result = { start_range }
+    for r in ranges:
+        next_result = set()
+        for o in result:
+            rs, re = r
+            os, oe = o
+            next_result = next_result | subtract_range(os, oe, rs, re)
+        result = next_result
+    return result
+
+
+def wrap_range(start_range, end_range, wrap):
+    """
+    Wraps a range of numbers around a boundary point `wrap` where `-wrap=wrap`.
+    The resulting set of numbers may be discontinuous on a number line.
+    """
+    assert start_range < end_range
+    
+    wrap2 = 2*wrap
+    
+    if end_range < -wrap:
+        return { (start_range+wrap2, end_range+wrap2) }
+    elif start_range > wrap:
+        return { (start_range-wrap2, end_range-wrap2) }
+    elif start_range < -wrap and end_range > -wrap:
+        return { (-wrap, end_range), (start_range+wrap2, wrap) }
+    elif start_range < wrap and end_range > wrap:
+        return { (start_range, wrap), (-wrap, end_range-wrap2) }
+    return { (start_range, end_range) }

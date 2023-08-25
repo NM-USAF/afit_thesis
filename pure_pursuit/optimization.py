@@ -1,7 +1,7 @@
 import numpy as np
 from .pursuit_math import *
 from scipy.optimize import minimize_scalar, differential_evolution
-
+from .utilities import *
 
 def can_escape_simple(
     mu_left, mu_right,
@@ -136,8 +136,8 @@ def optimal_evader_heading_newton(
     return th_l
 
 
-def capture_heading_binary(
-    mu, lod, initial_max=np.pi/2, initial_min=-np.pi/2, n_iters=10
+def capture_heading(
+    mu, lod, initial_max=np.pi/2, initial_min=-np.pi/2, n_iters=20
 ):
     """
     Use a binary search to find the heading at which the evader is just barely
@@ -159,15 +159,47 @@ def capture_heading_binary(
     return th_mid
 
 
-def negative_relu(x):
-    return np.where(x < 0, x, 0)
+def optimal_evader_heading_capture_angle(
+    lods,
+    mus,
+    headings
+):
+    # get capture range for each pursuer
+    capture_headings = capture_heading(mus, lods, n_iters=15)
+    capture_ranges = set.union(*[ 
+        # wrap the gamma +- theta_c ranges to [-pi, pi]
+        wrap_range(
+            h - (c_h+np.pi/2), 
+            h + (c_h+np.pi/2), 
+            np.pi
+        )
+        for h, c_h in zip(headings, capture_headings)
+    ])
+
+    # subtract each of those ranges from [-pi, pi]
+    initial_range = (-np.pi, np.pi)
+    escape_ranges = subtract_ranges(initial_range, capture_ranges)
+
+    # look for the largest range in what remains
+    # pick the midpoint of that one
+    escape_interval = (0, 0) # in case there is no escape
+    escape_interval_size = -1
+    escape_found = False
+    for (r_s, r_e) in escape_ranges:
+        r_size = r_e - r_s
+        if r_size > escape_interval_size:
+            escape_interval_size = r_size
+            escape_interval = (r_s, r_e)
+            escape_found = True
+
+    return escape_interval, escape_found
 
 
 def optimal_evader_heading_scipy(
     lods,
     mus,
     headings,
-    method="multiple_local",
+    scipy_method="multiple_local",
     n_guesses=None
 ):
     """
@@ -187,7 +219,7 @@ def optimal_evader_heading_scipy(
 
         return -np.min(rmins)
     
-    if method == "differential_evolution":
+    if scipy_method == "differential_evolution":
         result = differential_evolution(
             to_optimize, 
             [[-np.pi, np.pi]],
@@ -197,7 +229,7 @@ def optimal_evader_heading_scipy(
         
         return result.x[0], result.fun
 
-    if method == "multiple_local":
+    if scipy_method == "multiple_local":
         if not n_guesses:
             # number of guesses = number of pursuers + 1
             n_guesses = len(lods) + 1
@@ -261,3 +293,4 @@ def optimal_evader_heading(
         )
 
         return theta_l_optimize
+    

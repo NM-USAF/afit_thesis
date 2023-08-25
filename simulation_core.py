@@ -273,13 +273,21 @@ class PurePursuitScenario(EngagementModel):
         lods = np.array([ p.l / p.r for p in engagement_pursuers ])
         mus = np.array([ p.mu for p in engagement_pursuers ])
 
-        heading, margin = pp.optimal_evader_heading_scipy(
+        # heading, margin = pp.optimal_evader_heading_scipy(
+        #     lods,
+        #     mus,
+        #     angles
+        # )
+
+        interval, escape = pp.optimal_evader_heading_capture_angle(
             lods,
             mus,
             angles
         )
+        # any heading in `interval` should work, so just pick the midpoint
+        heading = (interval[0] + interval[1]) / 2
 
-        return heading, margin
+        return heading, escape
     
     
     def simulate(self, t_max):
